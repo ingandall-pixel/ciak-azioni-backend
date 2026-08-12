@@ -141,7 +141,7 @@ app.get('/api/market-analysis', async (req, res) => {
   res.json(results);
 });
 
-// INTERFACCIA WEB COMPLETA (CON RULES E ORDINAMENTO)
+// INTERFACCIA WEB COMPLETA
 app.get('/', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -176,9 +176,8 @@ app.get('/', (req, res) => {
     </head>
     <body>
         <div class="container">
-            <h1>CIAK! AZIONI 🎬</h1>
+            <h1>CIAK! AZIONI 🖕</h1>
             
-            <!-- PANNELLO REGOLE E ORDINAMENTO -->
             <div class="controls">
                 <div class="control-group">
                     <label>Mesi Mediana:</label>
@@ -242,7 +241,6 @@ app.get('/', (req, res) => {
                 let list = [...(globalData[currentMarket] || [])];
                 const sortBy = document.getElementById('sortBy').value;
 
-                // Ordinamento
                 list.sort((a, b) => {
                     if (sortBy === 'period') return b.changePeriodPct - a.changePeriodPct;
                     if (sortBy === 'daily') return b.dailyChangePct - a.dailyChangePct;
@@ -274,7 +272,6 @@ app.get('/', (req, res) => {
                 \`).join('');
             }
 
-            // Caricamento iniziale automatico all'apertura della pagina
             loadData();
         </script>
     </body>
