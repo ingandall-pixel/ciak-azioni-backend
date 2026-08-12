@@ -13,7 +13,7 @@ let marketCache = {
   lastUpdate: null
 };
 
-// LISTINO AZIONARIO (Puoi aggiungere tutte le azioni che vuoi)
+// LISTINO AZIONARIO
 const TICKERS = {
   ITA: [
     { ticker: 'ENI.MI', name: 'Eni S.p.A.', investingUrl: 'https://it.investing.com/equities/eni' },
@@ -70,14 +70,13 @@ async function executeMassiveAnalysis() {
   console.log(`[${new Date().toISOString()}] Avvio scansione mercati...`);
 
   const results = { ITA: [], USA: [], lastUpdate: new Date().toLocaleString('it-IT') };
-  const daysMedian = 6 * 21; // Periodo 6 Mesi per Mediana
-  const daysStd = 6 * 21;    // Periodo 6 Mesi per Dev. Standard
-  const minStdDevPct = 3.0;  // Deviazione Standard minima 3%
+  const daysMedian = 6 * 21;
+  const daysStd = 6 * 21;
+  const minStdDevPct = 3.0;
 
   for (const mkt of ['ITA', 'USA']) {
     const list = TICKERS[mkt];
     
-    // Analisi a gruppi di 5 titoli alla volta
     for (let i = 0; i < list.length; i += 5) {
       const batch = list.slice(i, i + 5);
 
@@ -110,14 +109,12 @@ async function executeMassiveAnalysis() {
           const stdDev = calculateStdDev(pricesStd, meanStd);
           if (stdDev < (minStdDevPct / 100) * meanStd) return;
 
-          // Calcolo percentuali di variazione
           const currentPrice = prices[prices.length - 1];
           const prevClose = prices.length >= 2 ? prices[prices.length - 2] : currentPrice;
           const dailyChangePct = ((currentPrice - prevClose) / prevClose) * 100;
           const priceAgo = pricesMedian[0] || currentPrice;
           const changePeriodPct = ((currentPrice - priceAgo) / priceAgo) * 100;
 
-          // Generazione grafico QuickChart
           const recentPrices = prices.slice(-10);
           const chartConfig = JSON.stringify({
             type: 'line',
@@ -147,16 +144,19 @@ async function executeMassiveAnalysis() {
         } catch (e) {}
       }));
 
-      // Pausa di 0.4 secondi tra un blocco e l'altro per proteggere la connessione
-      await delay(400); 
+      await delay(400);
     }
   }
 
-  // Salvataggio dei risultati filtrati in memoria
   marketCache = results;
   isAnalyzing = false;
   console.log(`[${new Date().toISOString()}] Scansione completata con successo!`);
 }
+
+// ROUTE BASE DI BENVENUTO
+app.get('/', (req, res) => {
+  res.send('Server CIAK Azioni è attivo e funzionante!');
+});
 
 // ROUTE 1: L'App chiama questa porta per scaricare i dati pronti
 app.get('/api/market-data', (req, res) => {
