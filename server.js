@@ -7,80 +7,83 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// ELENCO ESTESO MERCATO ITALIANO (Copertura completa Piazza Affari tra FTSE MIB, Mid Cap e Small Cap)
+// MERCATO ITALIANO (Con link di ricerca diretto e infallibile su Investing.com)
 const ITA_TICKERS = [
-  { ticker: 'A2A.MI', name: 'A2A S.p.A.', investingUrl: 'https://it.investing.com/equities/a2a' },
-  { ticker: 'AMP.MI', name: 'Amplifon S.p.A.', investingUrl: 'https://it.investing.com/equities/amplifon' },
-  { ticker: 'ANL.MI', name: 'Alkemy S.p.A.', investingUrl: 'https://it.investing.com/equities/alkemy' },
-  { ticker: 'ARIS.MI', name: 'Ariston Holding N.V.', investingUrl: 'https://it.investing.com/equities/ariston-holding-nv' },
-  { ticker: 'AZM.MI', name: 'Azimut Holding S.p.A.', investingUrl: 'https://it.investing.com/equities/azimut-holding' },
-  { ticker: 'BGN.MI', name: 'Banca Generali S.p.A.', investingUrl: 'https://it.investing.com/equities/banca-generali' },
-  { ticker: 'BMED.MI', name: 'Banca Mediolanum S.p.A.', investingUrl: 'https://it.investing.com/equities/banca-mediolanum' },
-  { ticker: 'BPE.MI', name: 'BPER Banca S.p.A.', investingUrl: 'https://it.investing.com/equities/banca-popolare-dell-emilia-romagna' },
-  { ticker: 'BMPS.MI', name: 'Banca Monte dei Paschi di Siena', investingUrl: 'https://it.investing.com/equities/banca-monte-de-paschi-di-siena' },
-  { ticker: 'BAMI.MI', name: 'Banco BPM S.p.A.', investingUrl: 'https://it.investing.com/equities/banco-bpm' },
-  { ticker: 'BZU.MI', name: 'Buzzi Unicem S.p.A.', investingUrl: 'https://it.investing.com/equities/buzzi-unicem' },
-  { ticker: 'CPR.MI', name: 'Davide Campari-Milano N.V.', investingUrl: 'https://it.investing.com/equities/davide-campari-milano' },
-  { ticker: 'DIA.MI', name: 'Diasorin S.p.A.', investingUrl: 'https://it.investing.com/equities/diasorin' },
-  { ticker: 'ENEL.MI', name: 'Enel S.p.A.', investingUrl: 'https://it.investing.com/equities/enel' },
-  { ticker: 'ENI.MI', name: 'Eni S.p.A.', investingUrl: 'https://it.investing.com/equities/eni' },
-  { ticker: 'ERG.MI', name: 'ERG S.p.A.', investingUrl: 'https://it.investing.com/equities/erg' },
-  { ticker: 'EXO.MI', name: 'Exor N.V.', investingUrl: 'https://it.investing.com/equities/exor' },
-  { ticker: 'RACE.MI', name: 'Ferrari N.V.', investingUrl: 'https://it.investing.com/equities/ferrari-nv' },
-  { ticker: 'FNM.MI', name: 'FinecoBank S.p.A.', investingUrl: 'https://it.investing.com/equities/finecobank' },
-  { ticker: 'G.MI', name: 'Assicurazioni Generali S.p.A.', investingUrl: 'https://it.investing.com/equities/generali' },
-  { ticker: 'HER.MI', name: 'Hera S.p.A.', investingUrl: 'https://it.investing.com/equities/hera' },
-  { ticker: 'ISP.MI', name: 'Intesa Sanpaolo S.p.A.', investingUrl: 'https://it.investing.com/equities/intesa-sanpaolo' },
-  { ticker: 'IG.MI', name: 'Italgas S.p.A.', investingUrl: 'https://it.investing.com/equities/italgas' },
-  { ticker: 'LION.MI', name: 'Leonardo S.p.A.', investingUrl: 'https://it.investing.com/equities/finmeccanica' },
-  { ticker: 'MB.MI', name: 'Mediobanca S.p.A.', investingUrl: 'https://it.investing.com/equities/mediobanca' },
-  { ticker: 'MIRC.MI', name: 'Maire Tecnimont S.p.A.', investingUrl: 'https://it.investing.com/equities/maire-tecnimont' },
-  { ticker: 'MONC.MI', name: 'Moncler S.p.A.', investingUrl: 'https://it.investing.com/equities/moncler' },
-  { ticker: 'NEXI.MI', name: 'Nexi S.p.A.', investingUrl: 'https://it.investing.com/equities/nexi-spa' },
-  { ticker: 'PRY.MI', name: 'Prysmian S.p.A.', investingUrl: 'https://it.investing.com/equities/prysmian' },
-  { ticker: 'REC.MI', name: 'Recordati S.p.A.', investingUrl: 'https://it.investing.com/equities/recordati' },
-  { ticker: 'SFER.MI', name: 'Salvatore Ferragamo S.p.A.', investingUrl: 'https://it.investing.com/equities/salvatore-ferragamo' },
-  { ticker: 'SPM.MI', name: 'Saipem S.p.A.', investingUrl: 'https://it.investing.com/equities/saipem' },
-  { ticker: 'SRG.MI', name: 'Snam S.p.A.', investingUrl: 'https://it.investing.com/equities/snam' },
-  { ticker: 'STLAM.MI', name: 'Stellantis N.V.', investingUrl: 'https://it.investing.com/equities/stellantis-nv' },
-  { ticker: 'STMMI.MI', name: 'STMicroelectronics N.V.', investingUrl: 'https://it.investing.com/equities/stmicroelectronics' },
-  { ticker: 'TIT.MI', name: 'Telecom Italia S.p.A.', investingUrl: 'https://it.investing.com/equities/telecom-italia' },
-  { ticker: 'TEN.MI', name: 'Tenaris S.A.', investingUrl: 'https://it.investing.com/equities/tenaris' },
-  { ticker: 'TRN.MI', name: 'Terna S.p.A.', investingUrl: 'https://it.investing.com/equities/terna' },
-  { ticker: 'UCG.MI', name: 'Unicredit S.p.A.', investingUrl: 'https://it.investing.com/equities/unicredit' },
-  { ticker: 'UNI.MI', name: 'Unipol Gruppo S.p.A.', investingUrl: 'https://it.investing.com/equities/unipol' },
-  { ticker: 'IP.MI', name: 'Gruppo API IP', investingUrl: 'https://it.investing.com/equities/gruppo-api' },
-  { ticker: 'MAR.MI', name: 'Marr S.p.A.', investingUrl: 'https://it.investing.com/equities/marr' },
-  { ticker: 'SAMI.MI', name: 'Safilo Group S.p.A.', investingUrl: 'https://it.investing.com/equities/safilo-group' },
-  { ticker: 'TOS.MI', name: 'Toscana Aeroporti S.p.A.', investingUrl: 'https://it.investing.com/equities/toscana-aeroporti' },
-  { ticker: 'BFF.MI', name: 'BFF Bank S.p.A.', investingUrl: 'https://it.investing.com/equities/bff-bank-spa' },
-  { ticker: 'ACE.MI', name: 'Acea', investingUrl: 'https://it.investing.com/equities/acea' },
-  { ticker: 'ANIM.MI', name: 'Anima Holding', investingUrl: 'https://it.investing.com/equities/anima-holding' },
-  { ticker: 'BRC.MI', name: 'Brembo', investingUrl: 'https://it.investing.com/equities/brembo' },
-  { ticker: 'FCT.MI', name: 'Fincantieri', investingUrl: 'https://it.investing.com/equities/fincantieri' },
-  { ticker: 'IPG.MI', name: 'Interpump Group', investingUrl: 'https://it.investing.com/equities/interpump-group' },
-  { ticker: 'LUVE.MI', name: 'Lu-Ve', investingUrl: 'https://it.investing.com/equities/lu-ve' },
-  { ticker: 'MAIRE.MI', name: 'Maire Tecnimont', investingUrl: 'https://it.investing.com/equities/maire-tecnimont' },
-  { ticker: 'PIRC.MI', name: 'Pirelli & C.', investingUrl: 'https://it.investing.com/equities/pirelli-c' },
-  { ticker: 'IGD.MI', name: 'IGD SIIQ S.p.A.', investingUrl: 'https://it.investing.com/equities/immobiliare-grande-distribuzione' },
-  { ticker: 'SAB.MI', name: 'Saras S.p.A.', investingUrl: 'https://it.investing.com/equities/saras' },
-  { ticker: 'DADA.MI', name: 'Digital Bros S.p.A.', investingUrl: 'https://it.investing.com/equities/digital-bros' },
-  { ticker: 'OVS.MI', name: 'OVS S.p.A.', investingUrl: 'https://it.investing.com/equities/ovs-spa' },
-  { ticker: 'TIN.MI', name: 'Tiscali S.p.A.', investingUrl: 'https://it.investing.com/equities/tiscali' },
-  { ticker: 'SOL.MI', name: 'SOL S.p.A.', investingUrl: 'https://it.investing.com/equities/sol' },
-  { ticker: 'AVIO.MI', name: 'Avio S.p.A.', investingUrl: 'https://it.investing.com/equities/avio-spa' },
-  { ticker: 'SECM.MI', name: 'Seco S.p.A.', investingUrl: 'https://it.investing.com/equities/seco-spa' },
-  { ticker: 'TYN.MI', name: 'Tamburi Investment Partners', investingUrl: 'https://it.investing.com/equities/tamburi' },
-  { ticker: 'REVO.MI', name: 'Revo Insurance S.p.A.', investingUrl: 'https://it.investing.com/equities/revo-insurance-spa' },
-  { ticker: 'SIT.MI', name: 'SIT S.p.A.', investingUrl: 'https://it.investing.com/equities/sit-spa' },
-  { ticker: 'JUVE.MI', name: 'Juventus Football Club', investingUrl: 'https://it.investing.com/equities/juventus-football-club' },
-  { ticker: 'LKT.MI', name: 'Lottomatica Group', investingUrl: 'https://it.investing.com/equities/lottomatica-group-spa' },
-  { ticker: 'WEBL.MI', name: 'Webuild S.p.A.', investingUrl: 'https://it.investing.com/equities/salini-impregilo' }
-];
+  { ticker: 'A2A.MI', name: 'A2A S.p.A.' },
+  { ticker: 'AMP.MI', name: 'Amplifon S.p.A.' },
+  { ticker: 'ANL.MI', name: 'Alkemy S.p.A.' },
+  { ticker: 'ARIS.MI', name: 'Ariston Holding N.V.' },
+  { ticker: 'AZM.MI', name: 'Azimut Holding S.p.A.' },
+  { ticker: 'BGN.MI', name: 'Banca Generali S.p.A.' },
+  { ticker: 'BMED.MI', name: 'Banca Mediolanum S.p.A.' },
+  { ticker: 'BPE.MI', name: 'BPER Banca S.p.A.' },
+  { ticker: 'BMPS.MI', name: 'Banca Monte dei Paschi di Siena' },
+  { ticker: 'BAMI.MI', name: 'Banco BPM S.p.A.' },
+  { ticker: 'BZU.MI', name: 'Buzzi Unicem S.p.A.' },
+  { ticker: 'CPR.MI', name: 'Davide Campari-Milano N.V.' },
+  { ticker: 'DIA.MI', name: 'Diasorin S.p.A.' },
+  { ticker: 'ENEL.MI', name: 'Enel S.p.A.' },
+  { ticker: 'ENI.MI', name: 'Eni S.p.A.' },
+  { ticker: 'ERG.MI', name: 'ERG S.p.A.' },
+  { ticker: 'EXO.MI', name: 'Exor N.V.' },
+  { ticker: 'RACE.MI', name: 'Ferrari N.V.' },
+  { ticker: 'FNM.MI', name: 'FinecoBank S.p.A.' },
+  { ticker: 'G.MI', name: 'Assicurazioni Generali S.p.A.' },
+  { ticker: 'HER.MI', name: 'Hera S.p.A.' },
+  { ticker: 'ISP.MI', name: 'Intesa Sanpaolo S.p.A.' },
+  { ticker: 'IG.MI', name: 'Italgas S.p.A.' },
+  { ticker: 'LION.MI', name: 'Leonardo S.p.A.' },
+  { ticker: 'MB.MI', name: 'Mediobanca S.p.A.' },
+  { ticker: 'MIRC.MI', name: 'Maire Tecnimont S.p.A.' },
+  { ticker: 'MONC.MI', name: 'Moncler S.p.A.' },
+  { ticker: 'NEXI.MI', name: 'Nexi S.p.A.' },
+  { ticker: 'PRY.MI', name: 'Prysmian S.p.A.' },
+  { ticker: 'REC.MI', name: 'Recordati S.p.A.' },
+  { ticker: 'SFER.MI', name: 'Salvatore Ferragamo S.p.A.' },
+  { ticker: 'SPM.MI', name: 'Saipem S.p.A.' },
+  { ticker: 'SRG.MI', name: 'Snam S.p.A.' },
+  { ticker: 'STLAM.MI', name: 'Stellantis N.V.' },
+  { ticker: 'STMMI.MI', name: 'STMicroelectronics N.V.' },
+  { ticker: 'TIT.MI', name: 'Telecom Italia S.p.A.' },
+  { ticker: 'TEN.MI', name: 'Tenaris S.A.' },
+  { ticker: 'TRN.MI', name: 'Terna S.p.A.' },
+  { ticker: 'UCG.MI', name: 'Unicredit S.p.A.' },
+  { ticker: 'UNI.MI', name: 'Unipol Gruppo S.p.A.' },
+  { ticker: 'IP.MI', name: 'Gruppo API IP' },
+  { ticker: 'MAR.MI', name: 'Marr S.p.A.' },
+  { ticker: 'SAMI.MI', name: 'Safilo Group S.p.A.' },
+  { ticker: 'TOS.MI', name: 'Toscana Aeroporti S.p.A.' },
+  { ticker: 'BFF.MI', name: 'BFF Bank S.p.A.' },
+  { ticker: 'ACE.MI', name: 'Acea' },
+  { ticker: 'ANIM.MI', name: 'Anima Holding' },
+  { ticker: 'BRC.MI', name: 'Brembo' },
+  { ticker: 'FCT.MI', name: 'Fincantieri' },
+  { ticker: 'IPG.MI', name: 'Interpump Group' },
+  { ticker: 'LUVE.MI', name: 'Lu-Ve' },
+  { ticker: 'MAIRE.MI', name: 'Maire Tecnimont' },
+  { ticker: 'PIRC.MI', name: 'Pirelli & C.' },
+  { ticker: 'IGD.MI', name: 'IGD SIIQ S.p.A.' },
+  { ticker: 'SAB.MI', name: 'Saras S.p.A.' },
+  { ticker: 'DADA.MI', name: 'Digital Bros S.p.A.' },
+  { ticker: 'OVS.MI', name: 'OVS S.p.A.' },
+  { ticker: 'TIN.MI', name: 'Tiscali S.p.A.' },
+  { ticker: 'SOL.MI', name: 'SOL S.p.A.' },
+  { ticker: 'AVIO.MI', name: 'Avio S.p.A.' },
+  { ticker: 'SECM.MI', name: 'Seco S.p.A.' },
+  { ticker: 'TYN.MI', name: 'Tamburi Investment Partners' },
+  { ticker: 'REVO.MI', name: 'Revo Insurance S.p.A.' },
+  { ticker: 'SIT.MI', name: 'SIT S.p.A.' },
+  { ticker: 'JUVE.MI', name: 'Juventus Football Club' },
+  { ticker: 'LKT.MI', name: 'Lottomatica Group' },
+  { ticker: 'WEBL.MI', name: 'Webuild S.p.A.' }
+].map(item => ({
+  ...item,
+  investingUrl: `https://it.investing.com/search/?q=${encodeURIComponent(item.ticker.replace('.MI', ''))}`
+}));
 
 let cachedMarketData = { ITA: [], USA: [], lastUpdate: 'Non ancora eseguito' };
 
-// Funzione per recuperare automaticamente le prime 300 azioni USA a maggiore liquidità
+// Funzione per recuperare automaticamente le prime 300 azioni USA
 async function getTop300USStocks() {
   try {
     const response = await fetch('https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/all/all_tickers.json');
@@ -92,7 +95,7 @@ async function getTop300USStocks() {
         return {
           ticker: ticker.toUpperCase(),
           name: ticker.toUpperCase(),
-          investingUrl: `https://it.investing.com/equities/${ticker.toLowerCase()}`
+          investingUrl: `https://it.investing.com/search/?q=${encodeURIComponent(ticker)}`
         };
       }).filter(Boolean).slice(0, 300);
     }
@@ -101,7 +104,11 @@ async function getTop300USStocks() {
   }
   
   const fallbackTopUS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'AMD', 'INTC', 'NFLX', 'JPM', 'V', 'JNJ', 'WMT', 'DIS'];
-  return fallbackTopUS.map(t => ({ ticker: t, name: t, investingUrl: `https://it.investing.com/equities/${t.toLowerCase()}` }));
+  return fallbackTopUS.map(t => ({ 
+    ticker: t, 
+    name: t, 
+    investingUrl: `https://it.investing.com/search/?q=${encodeURIComponent(t)}` 
+  }));
 }
 
 // Formule matematiche
@@ -124,7 +131,7 @@ async function runMarketAnalysis(ruleMonths = 6, ruleStdMonths = 6, ruleStdPct =
   const daysMedian = ruleMonths * 21;
   const daysStd = ruleStdMonths * 21;
 
-  // 1. Analisi Mercato Italiano (Batch di 3 con intervallo di sicurezza di 450ms)
+  // 1. Analisi Mercato Italiano
   console.log(`🇮🇹 Avvio scansione mercato ITA (${ITA_TICKERS.length} azioni) - Range 5 anni...`);
   for (let i = 0; i < ITA_TICKERS.length; i += 3) {
     const batch = ITA_TICKERS.slice(i, i + 3);
@@ -192,7 +199,7 @@ async function runMarketAnalysis(ruleMonths = 6, ruleStdMonths = 6, ruleStdPct =
     await delay(450);
   }
 
-  // 2. Analisi Mercato USA (Top 300 azioni, range storico 5 anni, batch di 3)
+  // 2. Analisi Mercato USA
   const US_TICKERS = await getTop300USStocks();
   console.log(`🇺🇸 Avvio scansione mercato USA (${US_TICKERS.length} azioni) - Range 5 anni...`);
 
