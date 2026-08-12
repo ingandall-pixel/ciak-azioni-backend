@@ -7,69 +7,79 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// LISTINO COMPLETO DEI MERCATI (Tutti i principali titoli ITA e USA)
-const TICKERS = {
-  ITA: [
-    { ticker: 'A2A.MI', name: 'A2A S.p.A.', investingUrl: 'https://it.investing.com/equities/a2a' },
-    { ticker: 'AMP.MI', name: 'Amplifon S.p.A.', investingUrl: 'https://it.investing.com/equities/amplifon' },
-    { ticker: 'AZM.MI', name: 'Azimut Holding', investingUrl: 'https://it.investing.com/equities/azimut-holding' },
-    { ticker: 'BGN.MI', name: 'Banca Generali', investingUrl: 'https://it.investing.com/equities/banca-generali' },
-    { ticker: 'BMED.MI', name: 'Banca Mediolanum', investingUrl: 'https://it.investing.com/equities/banca-mediolanum' },
-    { ticker: 'BPE.MI', name: 'BPER Banca', investingUrl: 'https://it.investing.com/equities/banca-popolare-dell-emilia-romagna' },
-    { ticker: 'BMPS.MI', name: 'Banca Monte dei Paschi di Siena', investingUrl: 'https://it.investing.com/equities/banca-monte-de-paschi-di-siena' },
-    { ticker: 'BAMI.MI', name: 'Banco BPM', investingUrl: 'https://it.investing.com/equities/banco-bpm' },
-    { ticker: 'CPR.MI', name: 'Davide Campari-Milano', investingUrl: 'https://it.investing.com/equities/davide-campari-milano' },
-    { ticker: 'DIA.MI', name: 'Diasorin S.p.A.', investingUrl: 'https://it.investing.com/equities/diasorin' },
-    { ticker: 'ENEL.MI', name: 'Enel S.p.A.', investingUrl: 'https://it.investing.com/equities/enel' },
-    { ticker: 'ENI.MI', name: 'Eni S.p.A.', investingUrl: 'https://it.investing.com/equities/eni' },
-    { ticker: 'ERG.MI', name: 'ERG S.p.A.', investingUrl: 'https://it.investing.com/equities/erg' },
-    { ticker: 'RACE.MI', name: 'Ferrari N.V.', investingUrl: 'https://it.investing.com/equities/ferrari-nv' },
-    { ticker: 'FNM.MI', name: 'FinecoBank', investingUrl: 'https://it.investing.com/equities/finecobank' },
-    { ticker: 'G.MI', name: 'Assicurazioni Generali', investingUrl: 'https://it.investing.com/equities/generali' },
-    { ticker: 'HER.MI', name: 'Hera S.p.A.', investingUrl: 'https://it.investing.com/equities/hera' },
-    { ticker: 'ISP.MI', name: 'Intesa Sanpaolo', investingUrl: 'https://it.investing.com/equities/intesa-sanpaolo' },
-    { ticker: 'IG.MI', name: 'Italgas S.p.A.', investingUrl: 'https://it.investing.com/equities/italgas' },
-    { ticker: 'LION.MI', name: 'Leonardo S.p.A.', investingUrl: 'https://it.investing.com/equities/finmeccanica' },
-    { ticker: 'MB.MI', name: 'Mediobanca', investingUrl: 'https://it.investing.com/equities/mediobanca' },
-    { ticker: 'MONC.MI', name: 'Moncler S.p.A.', investingUrl: 'https://it.investing.com/equities/moncler' },
-    { ticker: 'NEXI.MI', name: 'Nexi S.p.A.', investingUrl: 'https://it.investing.com/equities/nexi-spa' },
-    { ticker: 'PRY.MI', name: 'Prysmian S.p.A.', investingUrl: 'https://it.investing.com/equities/prysmian' },
-    { ticker: 'REC.MI', name: 'Recordati S.p.A.', investingUrl: 'https://it.investing.com/equities/recordati' },
-    { ticker: 'SPM.MI', name: 'Saipem S.p.A.', investingUrl: 'https://it.investing.com/equities/saipem' },
-    { ticker: 'SRG.MI', name: 'Snam S.p.A.', investingUrl: 'https://it.investing.com/equities/snam' },
-    { ticker: 'STLAM.MI', name: 'Stellantis N.V.', investingUrl: 'https://it.investing.com/equities/stellantis-nv' },
-    { ticker: 'STMMI.MI', name: 'STMicroelectronics', investingUrl: 'https://it.investing.com/equities/stmicroelectronics' },
-    { ticker: 'TIT.MI', name: 'Telecom Italia', investingUrl: 'https://it.investing.com/equities/telecom-italia' },
-    { ticker: 'TEN.MI', name: 'Tenaris S.A.', investingUrl: 'https://it.investing.com/equities/tenaris' },
-    { ticker: 'TRN.MI', name: 'Terna S.p.A.', investingUrl: 'https://it.investing.com/equities/terna' },
-    { ticker: 'UCG.MI', name: 'Unicredit S.p.A.', investingUrl: 'https://it.investing.com/equities/unicredit' },
-    { ticker: 'UNI.MI', name: 'Unipol Gruppo', investingUrl: 'https://it.investing.com/equities/unipol' }
-  ],
-  USA: [
-    { ticker: 'AAPL', name: 'Apple Inc.', investingUrl: 'https://it.investing.com/equities/apple-computer-inc' },
-    { ticker: 'MSFT', name: 'Microsoft Corp.', investingUrl: 'https://it.investing.com/equities/microsoft-corp' },
-    { ticker: 'NVDA', name: 'NVIDIA Corp.', investingUrl: 'https://it.investing.com/equities/nvidia-corp' },
-    { ticker: 'AMZN', name: 'Amazon.com Inc.', investingUrl: 'https://it.investing.com/equities/amazon-com-inc' },
-    { ticker: 'GOOGL', name: 'Alphabet Inc. (Google)', investingUrl: 'https://it.investing.com/equities/google-inc' },
-    { ticker: 'META', name: 'Meta Platforms', investingUrl: 'https://it.investing.com/equities/facebook-inc' },
-    { ticker: 'TSLA', name: 'Tesla Inc.', investingUrl: 'https://it.investing.com/equities/tesla-motors' },
-    { ticker: 'BRK-B', name: 'Berkshire Hathaway', investingUrl: 'https://it.investing.com/equities/berkshire-hathaway' },
-    { ticker: 'LLY', name: 'Eli Lilly and Company', investingUrl: 'https://it.investing.com/equities/eli-lilly-and-co' },
-    { ticker: 'AVGO', name: 'Broadcom Inc.', investingUrl: 'https://it.investing.com/equities/avago-technologies' },
-    { ticker: 'JPM', name: 'JPMorgan Chase', investingUrl: 'https://it.investing.com/equities/jp-morgan-chase' },
-    { ticker: 'WMT', name: 'Walmart Inc.', investingUrl: 'https://it.investing.com/equities/wal-mart-stores' },
-    { ticker: 'XOM', name: 'Exxon Mobil Corp.', investingUrl: 'https://it.investing.com/equities/exxon-mobil' },
-    { ticker: 'MA', name: 'Mastercard Inc.', investingUrl: 'https://it.investing.com/equities/mastercard-cl-a' },
-    { ticker: 'V', name: 'Visa Inc.', investingUrl: 'https://it.investing.com/equities/visa-inc' },
-    { ticker: 'NFLX', name: 'Netflix Inc.', investingUrl: 'https://it.investing.com/equities/netflix-inc' },
-    { ticker: 'AMD', name: 'Advanced Micro Devices', investingUrl: 'https://it.investing.com/equities/adv-micro-device' },
-    { ticker: 'INTC', name: 'Intel Corp.', investingUrl: 'https://it.investing.com/equities/intel-corp' },
-    { ticker: 'IBM', name: 'International Business Machines', investingUrl: 'https://it.investing.com/equities/ibm' },
-    { ticker: 'QCOM', name: 'QUALCOMM Inc.', investingUrl: 'https://it.investing.com/equities/qualcomm' }
-  ]
-};
+// INTEREZZA DEL MERCATO ITALIANO (Tutti i principali titoli di Piazza Affari)
+const ITA_TICKERS = [
+  { ticker: 'A2A.MI', name: 'A2A S.p.A.', investingUrl: 'https://it.investing.com/equities/a2a' },
+  { ticker: 'AMP.MI', name: 'Amplifon S.p.A.', investingUrl: 'https://it.investing.com/equities/amplifon' },
+  { ticker: 'ANL.MI', name: 'Alkemy S.p.A.', investingUrl: 'https://it.investing.com/equities/alkemy' },
+  { ticker: 'ARIS.MI', name: 'Ariston Holding N.V.', investingUrl: 'https://it.investing.com/equities/ariston-holding-nv' },
+  { ticker: 'AZM.MI', name: 'Azimut Holding S.p.A.', investingUrl: 'https://it.investing.com/equities/azimut-holding' },
+  { ticker: 'BGN.MI', name: 'Banca Generali S.p.A.', investingUrl: 'https://it.investing.com/equities/banca-generali' },
+  { ticker: 'BMED.MI', name: 'Banca Mediolanum S.p.A.', investingUrl: 'https://it.investing.com/equities/banca-mediolanum' },
+  { ticker: 'BPE.MI', name: 'BPER Banca S.p.A.', investingUrl: 'https://it.investing.com/equities/banca-popolare-dell-emilia-romagna' },
+  { ticker: 'BMPS.MI', name: 'Banca Monte dei Paschi di Siena', investingUrl: 'https://it.investing.com/equities/banca-monte-de-paschi-di-siena' },
+  { ticker: 'BAMI.MI', name: 'Banco BPM S.p.A.', investingUrl: 'https://it.investing.com/equities/banco-bpm' },
+  { ticker: 'BZU.MI', name: 'Buzzi Unicem S.p.A.', investingUrl: 'https://it.investing.com/equities/buzzi-unicem' },
+  { ticker: 'CPR.MI', name: 'Davide Campari-Milano N.V.', investingUrl: 'https://it.investing.com/equities/davide-campari-milano' },
+  { ticker: 'DIA.MI', name: 'Diasorin S.p.A.', investingUrl: 'https://it.investing.com/equities/diasorin' },
+  { ticker: 'ENEL.MI', name: 'Enel S.p.A.', investingUrl: 'https://it.investing.com/equities/enel' },
+  { ticker: 'ENI.MI', name: 'Eni S.p.A.', investingUrl: 'https://it.investing.com/equities/eni' },
+  { ticker: 'ERG.MI', name: 'ERG S.p.A.', investingUrl: 'https://it.investing.com/equities/erg' },
+  { ticker: 'EXO.MI', name: 'Exor N.V.', investingUrl: 'https://it.investing.com/equities/exor' },
+  { ticker: 'RACE.MI', name: 'Ferrari N.V.', investingUrl: 'https://it.investing.com/equities/ferrari-nv' },
+  { ticker: 'FNM.MI', name: 'FinecoBank S.p.A.', investingUrl: 'https://it.investing.com/equities/finecobank' },
+  { ticker: 'G.MI', name: 'Assicurazioni Generali S.p.A.', investingUrl: 'https://it.investing.com/equities/generali' },
+  { ticker: 'HER.MI', name: 'Hera S.p.A.', investingUrl: 'https://it.investing.com/equities/hera' },
+  { ticker: 'ISP.MI', name: 'Intesa Sanpaolo S.p.A.', investingUrl: 'https://it.investing.com/equities/intesa-sanpaolo' },
+  { ticker: 'IG.MI', name: 'Italgas S.p.A.', investingUrl: 'https://it.investing.com/equities/italgas' },
+  { ticker: 'LION.MI', name: 'Leonardo S.p.A.', investingUrl: 'https://it.investing.com/equities/finmeccanica' },
+  { ticker: 'MB.MI', name: 'Mediobanca S.p.A.', investingUrl: 'https://it.investing.com/equities/mediobanca' },
+  { ticker: 'MIRC.MI', name: 'Maire Tecnimont S.p.A.', investingUrl: 'https://it.investing.com/equities/maire-tecnimont' },
+  { ticker: 'MONC.MI', name: 'Moncler S.p.A.', investingUrl: 'https://it.investing.com/equities/moncler' },
+  { ticker: 'NEXI.MI', name: 'Nexi S.p.A.', investingUrl: 'https://it.investing.com/equities/nexi-spa' },
+  { ticker: 'PRY.MI', name: 'Prysmian S.p.A.', investingUrl: 'https://it.investing.com/equities/prysmian' },
+  { ticker: 'REC.MI', name: 'Recordati S.p.A.', investingUrl: 'https://it.investing.com/equities/recordati' },
+  { ticker: 'SFER.MI', name: 'Salvatore Ferragamo S.p.A.', investingUrl: 'https://it.investing.com/equities/salvatore-ferragamo' },
+  { ticker: 'SPM.MI', name: 'Saipem S.p.A.', investingUrl: 'https://it.investing.com/equities/saipem' },
+  { ticker: 'SRG.MI', name: 'Snam S.p.A.', investingUrl: 'https://it.investing.com/equities/snam' },
+  { ticker: 'STLAM.MI', name: 'Stellantis N.V.', investingUrl: 'https://it.investing.com/equities/stellantis-nv' },
+  { ticker: 'STMMI.MI', name: 'STMicroelectronics N.V.', investingUrl: 'https://it.investing.com/equities/stmicroelectronics' },
+  { ticker: 'TIT.MI', name: 'Telecom Italia S.p.A.', investingUrl: 'https://it.investing.com/equities/telecom-italia' },
+  { ticker: 'TEN.MI', name: 'Tenaris S.A.', investingUrl: 'https://it.investing.com/equities/tenaris' },
+  { ticker: 'TRN.MI', name: 'Terna S.p.A.', investingUrl: 'https://it.investing.com/equities/terna' },
+  { ticker: 'UCG.MI', name: 'Unicredit S.p.A.', investingUrl: 'https://it.investing.com/equities/unicredit' },
+  { ticker: 'UNI.MI', name: 'Unipol Gruppo S.p.A.', investingUrl: 'https://it.investing.com/equities/unipol' },
+  { ticker: 'IP.MI', name: 'Gruppo API IP', investingUrl: 'https://it.investing.com/equities/gruppo-api' },
+  { ticker: 'MAR.MI', name: 'Marr S.p.A.', investingUrl: 'https://it.investing.com/equities/marr' },
+  { ticker: 'SAMI.MI', name: 'Safilo Group S.p.A.', investingUrl: 'https://it.investing.com/equities/safilo-group' },
+  { ticker: 'TOS.MI', name: 'Toscana Aeroporti S.p.A.', investingUrl: 'https://it.investing.com/equities/toscana-aeroporti' },
+  { ticker: 'BFF.MI', name: 'BFF Bank S.p.A.', investingUrl: 'https://it.investing.com/equities/bff-bank-spa' }
+];
 
 let cachedMarketData = { ITA: [], USA: [], lastUpdate: 'Non ancora eseguito' };
+
+// Funzione per prelevare AUTOMATICAMENTE L'INTEREZZA del mercato USA (migliaia di ticker da NYSE e NASDAQ)
+async function getAllUSStocks() {
+  try {
+    const response = await fetch('https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/all/all_tickers.json');
+    if (response.ok) {
+      const symbols = await response.json();
+      return symbols.map(s => {
+        const ticker = typeof s === 'string' ? s : (s.symbol || s.ticker);
+        // Filtra simboli anomali o con caratteri speciali non validi per le API
+        if (!ticker || ticker.includes('.')) return null;
+        return {
+          ticker: ticker.toUpperCase(),
+          name: ticker.toUpperCase(),
+          investingUrl: `https://it.investing.com/search/?q=${ticker}`
+        };
+      }).filter(Boolean);
+    }
+  } catch (e) {
+    console.error("Errore recupero listino USA completo:", e);
+  }
+  return [];
+}
 
 // Formule matematiche
 const calculateMean = (arr) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
@@ -91,86 +101,152 @@ async function runMarketAnalysis(ruleMonths = 6, ruleStdMonths = 6, ruleStdPct =
   const daysMedian = ruleMonths * 21;
   const daysStd = ruleStdMonths * 21;
 
-  for (const mkt of ['ITA', 'USA']) {
-    const list = TICKERS[mkt];
-    
-    for (let i = 0; i < list.length; i += 5) {
-      const batch = list.slice(i, i + 5);
+  // 1. Analisi Mercato Italiano
+  for (let i = 0; i < ITA_TICKERS.length; i += 5) {
+    const batch = ITA_TICKERS.slice(i, i + 5);
+    await Promise.all(batch.map(async (item) => {
+      try {
+        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${item.ticker}?interval=1d&range=2y`;
+        const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        if (!response.ok) return;
 
-      await Promise.all(batch.map(async (item) => {
-        try {
-          const url = `https://query2.finance.yahoo.com/v8/finance/chart/${item.ticker}?interval=1d&range=2y`;
-          const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-          if (!response.ok) return;
+        const json = await response.json();
+        const resultObj = json.chart?.result?.[0];
+        if (!resultObj) return;
 
-          const json = await response.json();
-          const resultObj = json.chart?.result?.[0];
-          if (!resultObj) return;
+        const timestamps = resultObj.timestamp;
+        const quotes = resultObj.indicators.quote[0];
+        if (!timestamps || !quotes || !quotes.close) return;
 
-          const timestamps = resultObj.timestamp;
-          const quotes = resultObj.indicators.quote[0];
-          if (!timestamps || !quotes || !quotes.close) return;
+        const prices = quotes.close.filter(p => p !== null && !isNaN(p));
+        if (prices.length < Math.max(daysMedian, daysStd)) return;
 
-          const prices = quotes.close.filter(p => p !== null && !isNaN(p));
-          if (prices.length < Math.max(daysMedian, daysStd)) return;
+        const pricesMedian = prices.slice(-daysMedian);
+        const meanMed = calculateMean(pricesMedian);
+        const medMed = calculateMedian(pricesMedian);
+        if (medMed <= meanMed) return;
 
-          const pricesMedian = prices.slice(-daysMedian);
-          const meanMed = calculateMean(pricesMedian);
-          const medMed = calculateMedian(pricesMedian);
-          if (medMed <= meanMed) return;
+        const pricesStd = prices.slice(-daysStd);
+        const meanStd = calculateMean(pricesStd);
+        const stdDev = calculateStdDev(pricesStd, meanStd);
+        if (stdDev < (ruleStdPct / 100) * meanStd) return;
 
-          const pricesStd = prices.slice(-daysStd);
-          const meanStd = calculateMean(pricesStd);
-          const stdDev = calculateStdDev(pricesStd, meanStd);
-          if (stdDev < (ruleStdPct / 100) * meanStd) return;
+        const currentPrice = prices[prices.length - 1];
+        const prevClose = prices.length >= 2 ? prices[prices.length - 2] : currentPrice;
+        const dailyChangePct = ((currentPrice - prevClose) / prevClose) * 100;
+        const priceAgo = pricesMedian[0] || currentPrice;
+        const changePeriodPct = ((currentPrice - priceAgo) / priceAgo) * 100;
 
-          const currentPrice = prices[prices.length - 1];
-          const prevClose = prices.length >= 2 ? prices[prices.length - 2] : currentPrice;
-          const dailyChangePct = ((currentPrice - prevClose) / prevClose) * 100;
-          const priceAgo = pricesMedian[0] || currentPrice;
-          const changePeriodPct = ((currentPrice - priceAgo) / priceAgo) * 100;
+        const recentPrices = prices.slice(-10);
+        const chartConfig = JSON.stringify({
+          type: 'line',
+          data: {
+            labels: recentPrices.map((_, idx) => idx),
+            datasets: [{
+              data: recentPrices.map(p => Number(p.toFixed(2))),
+              borderColor: dailyChangePct >= 0 ? '#22c55e' : '#ef4444',
+              borderWidth: 3, fill: false, pointRadius: 0
+            }]
+          },
+          options: { legend: { display: false }, scales: { x: { display: false }, y: { display: false } } }
+        });
+        const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(chartConfig)}&w=220&h=110&bkg=transparent`;
 
-          const recentPrices = prices.slice(-10);
-          const chartConfig = JSON.stringify({
-            type: 'line',
-            data: {
-              labels: recentPrices.map((_, idx) => idx),
-              datasets: [{
-                data: recentPrices.map(p => Number(p.toFixed(2))),
-                borderColor: dailyChangePct >= 0 ? '#22c55e' : '#ef4444',
-                borderWidth: 3, fill: false, pointRadius: 0
-              }]
-            },
-            options: { legend: { display: false }, scales: { x: { display: false }, y: { display: false } } }
-          });
-          const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(chartConfig)}&w=220&h=110&bkg=transparent`;
-
-          results[mkt].push({
-            id: item.ticker,
-            name: item.name,
-            ticker: item.ticker,
-            price: `${currentPrice.toFixed(2)} ${mkt === 'ITA' ? '€' : '$'}`,
-            dailyChangePct,
-            changePeriodPct,
-            formattedDateTime: new Date(timestamps[timestamps.length - 1] * 1000).toLocaleDateString('it-IT'),
-            chartUrl,
-            investingUrl: item.investingUrl
-          });
-        } catch (e) {}
-      }));
-
-      await delay(250);
-    }
+        results.ITA.push({
+          id: item.ticker,
+          name: item.name,
+          ticker: item.ticker,
+          price: `${currentPrice.toFixed(2)} €`,
+          dailyChangePct,
+          changePeriodPct,
+          formattedDateTime: new Date(timestamps[timestamps.length - 1] * 1000).toLocaleDateString('it-IT'),
+          chartUrl,
+          investingUrl: item.investingUrl
+        });
+      } catch (e) {}
+    }));
+    await delay(100);
   }
+
+  // 2. Analisi Interezza Mercato USA (Tutti i ticker scaricati dinamicamente)
+  const US_TICKERS = await getAllUSStocks();
+  console.log(`📊 Avvio scansione intero mercato USA: ${US_TICKERS.length} azioni trovate.`);
+
+  for (let i = 0; i < US_TICKERS.length; i += 10) {
+    const batch = US_TICKERS.slice(i, i + 10);
+    await Promise.all(batch.map(async (item) => {
+      try {
+        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${item.ticker}?interval=1d&range=2y`;
+        const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+        if (!response.ok) return;
+
+        const json = await response.json();
+        const resultObj = json.chart?.result?.[0];
+        if (!resultObj) return;
+
+        const timestamps = resultObj.timestamp;
+        const quotes = resultObj.indicators.quote[0];
+        if (!timestamps || !quotes || !quotes.close) return;
+
+        const prices = quotes.close.filter(p => p !== null && !isNaN(p));
+        if (prices.length < Math.max(daysMedian, daysStd)) return;
+
+        const pricesMedian = prices.slice(-daysMedian);
+        const meanMed = calculateMean(pricesMedian);
+        const medMed = calculateMedian(pricesMedian);
+        if (medMed <= meanMed) return;
+
+        const pricesStd = prices.slice(-daysStd);
+        const meanStd = calculateMean(pricesStd);
+        const stdDev = calculateStdDev(pricesStd, meanStd);
+        if (stdDev < (ruleStdPct / 100) * meanStd) return;
+
+        const currentPrice = prices[prices.length - 1];
+        const prevClose = prices.length >= 2 ? prices[prices.length - 2] : currentPrice;
+        const dailyChangePct = ((currentPrice - prevClose) / prevClose) * 100;
+        const priceAgo = pricesMedian[0] || currentPrice;
+        const changePeriodPct = ((currentPrice - priceAgo) / priceAgo) * 100;
+
+        const recentPrices = prices.slice(-10);
+        const chartConfig = JSON.stringify({
+          type: 'line',
+          data: {
+            labels: recentPrices.map((_, idx) => idx),
+            datasets: [{
+              data: recentPrices.map(p => Number(p.toFixed(2))),
+              borderColor: dailyChangePct >= 0 ? '#22c55e' : '#ef4444',
+              borderWidth: 3, fill: false, pointRadius: 0
+            }]
+          },
+          options: { legend: { display: false }, scales: { x: { display: false }, y: { display: false } } }
+        });
+        const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(chartConfig)}&w=220&h=110&bkg=transparent`;
+
+        results.USA.push({
+          id: item.ticker,
+          name: item.name,
+          ticker: item.ticker,
+          price: `${currentPrice.toFixed(2)} $`,
+          dailyChangePct,
+          changePeriodPct,
+          formattedDateTime: new Date(timestamps[timestamps.length - 1] * 1000).toLocaleDateString('it-IT'),
+          chartUrl,
+          investingUrl: item.investingUrl
+        });
+      } catch (e) {}
+    }));
+    await delay(150);
+  }
+
   return results;
 }
 
 // Schedulazione automatica alle 05:00 del mattino
 cron.schedule('0 5 * * *', async () => {
-  console.log('⏰ [CRON] Avvio analisi automatica dei mercati...');
+  console.log('⏰ [CRON] Avvio analisi automatica globale dei mercati...');
   try {
     cachedMarketData = await runMarketAnalysis();
-    console.log('✅ [CRON] Analisi completata con successo!');
+    console.log('✅ [CRON] Analisi globale completata con successo!');
   } catch (err) {
     console.error('❌ [CRON] Errore:', err);
   }
@@ -257,7 +333,7 @@ app.get('/', (req, res) => {
                 <button class="tab" id="btn-USA" onclick="switchMarket('USA')">🇺🇸 USA</button>
             </div>
 
-            <div id="content" class="loading">Clicca su "Avvia Analisi" per scansionare i mercati.</div>
+            <div id="content" class="loading">Clicca su "Avvia Analisi" per scansionare l'interezza dei mercati.</div>
         </div>
 
         <script>
@@ -269,7 +345,7 @@ app.get('/', (req, res) => {
                 const stdMonths = document.getElementById('ruleStdMonths').value;
                 const stdPct = document.getElementById('ruleStdPct').value;
 
-                document.getElementById('content').innerHTML = '<div class="loading">Analisi di tutti i titoli dei mercati in corso... Attendere prego ⏳</div>';
+                document.getElementById('content').innerHTML = '<div class="loading">Analisi globale in corso (migliaia di azioni USA e ITA)... Potrebbe richiedere qualche minuto ⏳</div>';
 
                 try {
                     const res = await fetch(\`/api/market-analysis?ruleMonths=\${months}&ruleStdMonths=\${stdMonths}&ruleStdPct=\${stdPct}\`);
