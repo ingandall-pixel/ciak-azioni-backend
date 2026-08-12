@@ -6,13 +6,6 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// Memoria temporanea (RAM) del server
-let marketCache = {
-  ITA: [],
-  USA: [],
-  lastUpdate: null
-};
-
 // LISTINO AZIONARIO
 const TICKERS = {
   ITA: [
@@ -61,18 +54,15 @@ const calculateStdDev = (arr, mean) => {
 };
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-let isAnalyzing = false;
-
-// Funzione di scansione
-async function executeMassiveAnalysis() {
-  if (isAnalyzing) return;
-  isAnalyzing = true;
-  console.log(`[${new Date().toISOString()}] Avvio scansione mercati...`);
+// API PRINCIPALE DI ANALISI CON REGOLE PERSONALIZZABILI
+app.get('/api/market-analysis', async (req, res) => {
+  const ruleMonths = parseInt(req.query.ruleMonths) || 6;
+  const ruleStdMonths = parseInt(req.query.ruleStdMonths) || 6;
+  const ruleStdPct = parseFloat(req.query.ruleStdPct) || 3.0;
 
   const results = { ITA: [], USA: [], lastUpdate: new Date().toLocaleString('it-IT') };
-  const daysMedian = 6 * 21;
-  const daysStd = 6 * 21;
-  const minStdDevPct = 3.0;
+  const daysMedian = ruleMonths * 21;
+  const daysStd = ruleStdMonths * 21;
 
   for (const mkt of ['ITA', 'USA']) {
     const list = TICKERS[mkt];
@@ -103,11 +93,11 @@ async function executeMassiveAnalysis() {
           const medMed = calculateMedian(pricesMedian);
           if (medMed <= meanMed) return;
 
-          // REGOLA 2: Deviazione Standard > 3%
+          // REGOLA 2: Deviazione Standard > Soglia %
           const pricesStd = prices.slice(-daysStd);
           const meanStd = calculateMean(pricesStd);
           const stdDev = calculateStdDev(pricesStd, meanStd);
-          if (stdDev < (minStdDevPct / 100) * meanStd) return;
+          if (stdDev < (ruleStdPct / 100) * meanStd) return;
 
           const currentPrice = prices[prices.length - 1];
           const prevClose = prices.length >= 2 ? prices[prices.length - 2] : currentPrice;
@@ -144,16 +134,14 @@ async function executeMassiveAnalysis() {
         } catch (e) {}
       }));
 
-      await delay(400);
+      await delay(200);
     }
   }
 
-  marketCache = results;
-  isAnalyzing = false;
-  console.log(`[${new Date().toISOString()}] Scansione completata con successo!`);
-}
+  res.json(results);
+});
 
-// ROUTE WEB VISIBILE DAL BROWSER (GRAFICA HTML)
+// INTERFACCIA WEB COMPLETA (CON RULES E ORDINAMENTO)
 app.get('/', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -164,9 +152,14 @@ app.get('/', (req, res) => {
         <title>CIAK! AZIONI</title>
         <style>
             body { font-family: Arial, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
-            .container { max-width: 800px; margin: 0 auto; }
+            .container { max-width: 850px; margin: 0 auto; }
             h1 { text-align: center; font-style: italic; color: #f8fafc; letter-spacing: 1px; }
-            .tabs { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; }
+            .controls { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; align-items: center; justify-content: space-between; border: 1px solid #334155; }
+            .control-group { display: flex; flex-direction: column; font-size: 13px; color: #94a3b8; }
+            .control-group input, .control-group select { background: #0f172a; color: #fff; border: 1px solid #475569; padding: 6px 10px; border-radius: 6px; margin-top: 4px; }
+            button.btn-run { background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; height: 38px; align-self: flex-end; }
+            button.btn-run:hover { background: #1d4ed8; }
+            .tabs { display: flex; gap: 10px; margin-bottom: 15px; justify-content: center; }
             .tab { padding: 10px 20px; background: #1e293b; color: #94a3b8; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; }
             .tab.active { background: #2563eb; color: #ffffff; }
             .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; text-decoration: none; color: inherit; transition: 0.2s; }
@@ -183,31 +176,58 @@ app.get('/', (req, res) => {
     </head>
     <body>
         <div class="container">
-            <h1>CIAK! AZIONI 🖕</h1>
+            <h1>CIAK! AZIONI 🎬</h1>
+            
+            <!-- PANNELLO REGOLE E ORDINAMENTO -->
+            <div class="controls">
+                <div class="control-group">
+                    <label>Mesi Mediana:</label>
+                    <input type="number" id="ruleMonths" value="6" style="width: 60px;">
+                </div>
+                <div class="control-group">
+                    <label>Mesi Std Dev:</label>
+                    <input type="number" id="ruleStdMonths" value="6" style="width: 60px;">
+                </div>
+                <div class="control-group">
+                    <label>Min Std Dev %:</label>
+                    <input type="number" step="0.5" id="ruleStdPct" value="3.0" style="width: 60px;">
+                </div>
+                <div class="control-group">
+                    <label>Ordina per:</label>
+                    <select id="sortBy" onchange="render()">
+                        <option value="period">Performance Periodo</option>
+                        <option value="daily">Variazione Giornaliera</option>
+                        <option value="name">Nome Azione</option>
+                    </select>
+                </div>
+                <button class="btn-run" onclick="loadData()">Avvia Analisi</button>
+            </div>
+
             <div class="tabs">
                 <button class="tab active" id="btn-ITA" onclick="switchMarket('ITA')">🇮🇹 ITA</button>
                 <button class="tab" id="btn-USA" onclick="switchMarket('USA')">🇺🇸 USA</button>
             </div>
-            <div id="content" class="loading">Caricamento dati dal server...</div>
+
+            <div id="content" class="loading">Clicca su "Avvia Analisi" per scansionare i mercati.</div>
         </div>
 
         <script>
             let globalData = { ITA: [], USA: [] };
             let currentMarket = 'ITA';
 
-            async function fetchData() {
+            async function loadData() {
+                const months = document.getElementById('ruleMonths').value;
+                const stdMonths = document.getElementById('ruleStdMonths').value;
+                const stdPct = document.getElementById('ruleStdPct').value;
+
+                document.getElementById('content').innerHTML = '<div class="loading">Analisi dei mercati in corso... Attendere prego ⏳</div>';
+
                 try {
-                    const res = await fetch('/api/market-data');
-                    const json = await res.json();
-                    if(json.message) {
-                        document.getElementById('content').innerHTML = '<div class="loading">' + json.message + '<br><small>Ricarica la pagina tra qualche secondo.</small></div>';
-                        setTimeout(fetchData, 4000);
-                        return;
-                    }
-                    globalData = json;
+                    const res = await fetch(\`/api/market-analysis?ruleMonths=\${months}&ruleStdMonths=\${stdMonths}&ruleStdPct=\${stdPct}\`);
+                    globalData = await res.json();
                     render();
                 } catch(e) {
-                    document.getElementById('content').innerHTML = '<div class="loading" style="color:red;">Errore di caricamento dati.</div>';
+                    document.getElementById('content').innerHTML = '<div class="loading" style="color:red;">Errore durante la comunicazione con il server.</div>';
                 }
             }
 
@@ -219,7 +239,16 @@ app.get('/', (req, res) => {
             }
 
             function render() {
-                const list = globalData[currentMarket] || [];
+                let list = [...(globalData[currentMarket] || [])];
+                const sortBy = document.getElementById('sortBy').value;
+
+                // Ordinamento
+                list.sort((a, b) => {
+                    if (sortBy === 'period') return b.changePeriodPct - a.changePeriodPct;
+                    if (sortBy === 'daily') return b.dailyChangePct - a.dailyChangePct;
+                    if (sortBy === 'name') return a.name.localeCompare(b.name);
+                });
+
                 const container = document.getElementById('content');
                 
                 if(list.length === 0) {
@@ -245,29 +274,14 @@ app.get('/', (req, res) => {
                 \`).join('');
             }
 
-            fetchData();
+            // Caricamento iniziale automatico all'apertura della pagina
+            loadData();
         </script>
     </body>
     </html>
   `);
 });
 
-// ROUTE 1: L'App chiama questa porta per scaricare i dati pronti
-app.get('/api/market-data', (req, res) => {
-  if (!marketCache.lastUpdate && !isAnalyzing) {
-    executeMassiveAnalysis();
-    return res.status(202).json({ message: 'Analisi in corso... Riprova tra pochi secondi.' });
-  }
-  return res.json(marketCache);
-});
-
-// ROUTE 2: Il timer esterno chiama questa porta per far partire la scansione
-app.get('/api/trigger-analysis', async (req, res) => {
-  res.json({ message: 'Scansione avviata in background!' });
-  executeMassiveAnalysis();
-});
-
 app.listen(PORT, () => {
   console.log(`Server avviato sulla porta ${PORT}`);
-  executeMassiveAnalysis();
 });
