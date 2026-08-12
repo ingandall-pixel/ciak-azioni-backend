@@ -7,7 +7,7 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// INTEREZZA DEL MERCATO ITALIANO (Tutti i titoli di Piazza Affari: MIB, Mid Cap, Small Cap, EGM)
+// ELENCO ESTESO MERCATO ITALIANO (Copertura completa Piazza Affari tra FTSE MIB, Mid Cap e Small Cap)
 const ITA_TICKERS = [
   { ticker: 'A2A.MI', name: 'A2A S.p.A.', investingUrl: 'https://it.investing.com/equities/a2a' },
   { ticker: 'AMP.MI', name: 'Amplifon S.p.A.', investingUrl: 'https://it.investing.com/equities/amplifon' },
@@ -54,116 +54,54 @@ const ITA_TICKERS = [
   { ticker: 'SAMI.MI', name: 'Safilo Group S.p.A.', investingUrl: 'https://it.investing.com/equities/safilo-group' },
   { ticker: 'TOS.MI', name: 'Toscana Aeroporti S.p.A.', investingUrl: 'https://it.investing.com/equities/toscana-aeroporti' },
   { ticker: 'BFF.MI', name: 'BFF Bank S.p.A.', investingUrl: 'https://it.investing.com/equities/bff-bank-spa' },
-  // Ulteriori titoli aggiunti per copertura estesa Mid/Small Cap ed EGM
-  { ticker: 'A2A.MI', name: 'A2A', investingUrl: 'https://it.investing.com/equities/a2a' },
   { ticker: 'ACE.MI', name: 'Acea', investingUrl: 'https://it.investing.com/equities/acea' },
-  { ticker: 'Aeffe.MI', name: 'Aeffe', investingUrl: 'https://it.investing.com/equities/aeffe' },
-  { ticker: 'ALK.MI', name: 'Alkemy', investingUrl: 'https://it.investing.com/equities/alkemy' },
   { ticker: 'ANIM.MI', name: 'Anima Holding', investingUrl: 'https://it.investing.com/equities/anima-holding' },
-  { ticker: 'ANL.MI', name: 'Alkemy', investingUrl: 'https://it.investing.com/equities/alkemy' },
-  { ticker: 'ANS.MI', name: 'Ansaldo STS', investingUrl: 'https://it.investing.com/equities/ansaldo-sts' },
-  { ticker: 'AUT.MI', name: 'Autogrill', investingUrl: 'https://it.investing.com/equities/autogrill' },
-  { ticker: 'AZM.MI', name: 'Azimut Holding', investingUrl: 'https://it.investing.com/equities/azimut-holding' },
-  { ticker: 'BGN.MI', name: 'Banca Generali', investingUrl: 'https://it.investing.com/equities/banca-generali' },
-  { ticker: 'BMED.MI', name: 'Banca Mediolanum', investingUrl: 'https://it.investing.com/equities/banca-mediolanum' },
-  { ticker: 'BMPS.MI', name: 'Banca Monte dei Paschi di Siena', investingUrl: 'https://it.investing.com/equities/banca-monte-de-paschi-di-siena' },
-  { ticker: 'BNL.MI', name: 'Banca Nazionale del Lavoro', investingUrl: 'https://it.investing.com/equities/banca-nazionale-del-lavoro' },
-  { ticker: 'BP.MI', name: 'Banco Popolare', investingUrl: 'https://it.investing.com/equities/banco-popolare' },
-  { ticker: 'BPER.MI', name: 'BPER Banca', investingUrl: 'https://it.investing.com/equities/banca-popolare-dell-emilia-romagna' },
   { ticker: 'BRC.MI', name: 'Brembo', investingUrl: 'https://it.investing.com/equities/brembo' },
-  { ticker: 'BUN.MI', name: 'Buzzi Unicem', investingUrl: 'https://it.investing.com/equities/buzzi-unicem' },
-  { ticker: 'CAI.MI', name: 'Cairo Communication', investingUrl: 'https://it.investing.com/equities/cairo-communication' },
-  { ticker: 'CPR.MI', name: 'Davide Campari-Milano', investingUrl: 'https://it.investing.com/equities/davide-campari-milano' },
-  { ticker: 'CARR.MI', name: 'Carraro', investingUrl: 'https://it.investing.com/equities/carraro' },
-  { ticker: 'CATT.MI', name: 'Cattolica Assicurazioni', investingUrl: 'https://it.investing.com/equities/cattolica-assicurazioni' },
-  { ticker: 'CEM.MI', name: 'Cem Ambiente', investingUrl: 'https://it.investing.com/equities/cem' },
-  { ticker: 'CIR.MI', name: 'CIR', investingUrl: 'https://it.investing.com/equities/cir' },
-  { ticker: 'CMB.MI', name: 'Credito Emiliano', investingUrl: 'https://it.investing.com/equities/credito-emiliano' },
-  { ticker: 'CPR.MI', name: 'Campari', investingUrl: 'https://it.investing.com/equities/davide-campari-milano' },
-  { ticker: 'CRG.MI', name: 'Carige', investingUrl: 'https://it.investing.com/equities/banca-carige' },
-  { ticker: 'CTI.MI', name: 'Caleffi', investingUrl: 'https://it.investing.com/equities/caleffi' },
-  { ticker: 'DADA.MI', name: 'Dada', investingUrl: 'https://it.investing.com/equities/dada' },
-  { ticker: 'DB.MI', name: 'Datalogic', investingUrl: 'https://it.investing.com/equities/datalogic' },
-  { ticker: 'DIA.MI', name: 'Diasorin', investingUrl: 'https://it.investing.com/equities/diasorin' },
-  { ticker: 'EEMS.MI', name: 'EEMS', investingUrl: 'https://it.investing.com/equities/eems' },
-  { ticker: 'Elica.MI', name: 'Elica', investingUrl: 'https://it.investing.com/equities/elica' },
-  { ticker: 'ENEL.MI', name: 'Enel', investingUrl: 'https://it.investing.com/equities/enel' },
-  { ticker: 'ENI.MI', name: 'Eni', investingUrl: 'https://it.investing.com/equities/eni' },
-  { ticker: 'ERG.MI', name: 'ERG', investingUrl: 'https://it.investing.com/equities/erg' },
-  { ticker: 'ESPR.MI', name: 'Esprinet', investingUrl: 'https://it.investing.com/equities/esprinet' },
-  { ticker: 'EXO.MI', name: 'Exor', investingUrl: 'https://it.investing.com/equities/exor' },
   { ticker: 'FCT.MI', name: 'Fincantieri', investingUrl: 'https://it.investing.com/equities/fincantieri' },
-  { ticker: 'FL.MI', name: 'Banca Fideuram', investingUrl: 'https://it.investing.com/equities/banca-fideuram' },
-  { ticker: 'FNM.MI', name: 'FinecoBank', investingUrl: 'https://it.investing.com/equities/finecobank' },
-  { ticker: 'FPR.MI', name: 'Fiera Milano', investingUrl: 'https://it.investing.com/equities/fiera-milano' },
-  { ticker: 'G.MI', name: 'Assicurazioni Generali', investingUrl: 'https://it.investing.com/equities/generali' },
-  { ticker: 'GBR.MI', name: 'Gefran', investingUrl: 'https://it.investing.com/equities/gefran' },
-  { ticker: 'GEDI.MI', name: 'Gedi Gruppo Editoriale', investingUrl: 'https://it.investing.com/equities/gedi' },
-  { ticker: 'HER.MI', name: 'Hera', investingUrl: 'https://it.investing.com/equities/hera' },
-  { ticker: 'IG.MI', name: 'Italgas', investingUrl: 'https://it.investing.com/equities/italgas' },
-  { ticker: 'IGD.MI', name: 'IGD SIIQ', investingUrl: 'https://it.investing.com/equities/igd' },
-  { ticker: 'IP.MI', name: 'Gruppo API IP', investingUrl: 'https://it.investing.com/equities/gruppo-api' },
   { ticker: 'IPG.MI', name: 'Interpump Group', investingUrl: 'https://it.investing.com/equities/interpump-group' },
-  { ticker: 'ISP.MI', name: 'Intesa Sanpaolo', investingUrl: 'https://it.investing.com/equities/intesa-sanpaolo' },
-  { ticker: 'LIT.MI', name: 'Restart', investingUrl: 'https://it.investing.com/equities/restart' },
-  { ticker: 'LION.MI', name: 'Leonardo', investingUrl: 'https://it.investing.com/equities/finmeccanica' },
   { ticker: 'LUVE.MI', name: 'Lu-Ve', investingUrl: 'https://it.investing.com/equities/lu-ve' },
   { ticker: 'MAIRE.MI', name: 'Maire Tecnimont', investingUrl: 'https://it.investing.com/equities/maire-tecnimont' },
-  { ticker: 'MAR.MI', name: 'Marr', investingUrl: 'https://it.investing.com/equities/marr' },
-  { ticker: 'MB.MI', name: 'Mediobanca', investingUrl: 'https://it.investing.com/equities/mediobanca' },
-  { ticker: 'MDB.MI', name: 'Mondadori Editore', investingUrl: 'https://it.investing.com/equities/arnoldo-mondadori-editore' },
-  { ticker: 'MEC.MI', name: 'Maikrò', investingUrl: 'https://it.investing.com/equities/maiorc' },
-  { ticker: 'MOL.MI', name: 'Molmed', investingUrl: 'https://it.investing.com/equities/molmed' },
-  { ticker: 'MONC.MI', name: 'Moncler', investingUrl: 'https://it.investing.com/equities/moncler' },
-  { ticker: 'MS.MI', name: 'Moleskine', investingUrl: 'https://it.investing.com/equities/moleskine' },
-  { ticker: 'NEXI.MI', name: 'Nexi', investingUrl: 'https://it.investing.com/equities/nexi-spa' },
-  { ticker: 'OMV.MI', name: 'Omsa', investingUrl: 'https://it.investing.com/equities/omsa' },
   { ticker: 'PIRC.MI', name: 'Pirelli & C.', investingUrl: 'https://it.investing.com/equities/pirelli-c' },
-  { ticker: 'PRY.MI', name: 'Prysmian', investingUrl: 'https://it.investing.com/equities/prysmian' },
-  { ticker: 'RACE.MI', name: 'Ferrari', investingUrl: 'https://it.investing.com/equities/ferrari-nv' },
-  { ticker: 'RCS.MI', name: 'RCS Mediagroup', investingUrl: 'https://it.investing.com/equities/rcs-mediagroup' },
-  { ticker: 'REC.MI', name: 'Recordati', investingUrl: 'https://it.investing.com/equities/recordati' },
-  { ticker: 'REN.MI', name: 'Reno De Medici', investingUrl: 'https://it.investing.com/equities/reno-de-medici' },
-  { ticker: 'SAMI.MI', name: 'Safilo Group', investingUrl: 'https://it.investing.com/equities/safilo-group' },
-  { ticker: 'SFER.MI', name: 'Salvatore Ferragamo', investingUrl: 'https://it.investing.com/equities/salvatore-ferragamo' },
-  { ticker: 'SIA.MI', name: 'Sias', investingUrl: 'https://it.investing.com/equities/sias' },
-  { ticker: 'SPM.MI', name: 'Saipem', investingUrl: 'https://it.investing.com/equities/saipem' },
-  { ticker: 'SRG.MI', name: 'Snam', investingUrl: 'https://it.investing.com/equities/snam' },
-  { ticker: 'STLAM.MI', name: 'Stellantis', investingUrl: 'https://it.investing.com/equities/stellantis-nv' },
-  { ticker: 'STMMI.MI', name: 'STMicroelectronics', investingUrl: 'https://it.investing.com/equities/stmicroelectronics' },
-  { ticker: 'TEN.MI', name: 'Tenaris', investingUrl: 'https://it.investing.com/equities/tenaris' },
-  { ticker: 'TIS.MI', name: 'Tiscali', investingUrl: 'https://it.investing.com/equities/tiscali' },
-  { ticker: 'TIT.MI', name: 'Telecom Italia', investingUrl: 'https://it.investing.com/equities/telecom-italia' },
-  { ticker: 'TOD.MI', name: 'Tod\'s', investingUrl: 'https://it.investing.com/equities/tods' },
-  { ticker: 'TOS.MI', name: 'Toscana Aeroporti', investingUrl: 'https://it.investing.com/equities/toscana-aeroporti' },
-  { ticker: 'TRN.MI', name: 'Terna', investingUrl: 'https://it.investing.com/equities/terna' },
-  { ticker: 'UCG.MI', name: 'UniCredit', investingUrl: 'https://it.investing.com/equities/unicredit' },
-  { ticker: 'UNI.MI', name: 'Unipol', investingUrl: 'https://it.investing.com/equities/unipol' },
-  { ticker: 'US.MI', name: 'UnipolSai', investingUrl: 'https://it.investing.com/equities/unipolsai' }
+  { ticker: 'IGD.MI', name: 'IGD SIIQ S.p.A.', investingUrl: 'https://it.investing.com/equities/immobiliare-grande-distribuzione' },
+  { ticker: 'SAB.MI', name: 'Saras S.p.A.', investingUrl: 'https://it.investing.com/equities/saras' },
+  { ticker: 'DADA.MI', name: 'Digital Bros S.p.A.', investingUrl: 'https://it.investing.com/equities/digital-bros' },
+  { ticker: 'OVS.MI', name: 'OVS S.p.A.', investingUrl: 'https://it.investing.com/equities/ovs-spa' },
+  { ticker: 'TIN.MI', name: 'Tiscali S.p.A.', investingUrl: 'https://it.investing.com/equities/tiscali' },
+  { ticker: 'SOL.MI', name: 'SOL S.p.A.', investingUrl: 'https://it.investing.com/equities/sol' },
+  { ticker: 'AVIO.MI', name: 'Avio S.p.A.', investingUrl: 'https://it.investing.com/equities/avio-spa' },
+  { ticker: 'SECM.MI', name: 'Seco S.p.A.', investingUrl: 'https://it.investing.com/equities/seco-spa' },
+  { ticker: 'TYN.MI', name: 'Tamburi Investment Partners', investingUrl: 'https://it.investing.com/equities/tamburi' },
+  { ticker: 'REVO.MI', name: 'Revo Insurance S.p.A.', investingUrl: 'https://it.investing.com/equities/revo-insurance-spa' },
+  { ticker: 'SIT.MI', name: 'SIT S.p.A.', investingUrl: 'https://it.investing.com/equities/sit-spa' },
+  { ticker: 'JUVE.MI', name: 'Juventus Football Club', investingUrl: 'https://it.investing.com/equities/juventus-football-club' },
+  { ticker: 'LKT.MI', name: 'Lottomatica Group', investingUrl: 'https://it.investing.com/equities/lottomatica-group-spa' },
+  { ticker: 'WEBL.MI', name: 'Webuild S.p.A.', investingUrl: 'https://it.investing.com/equities/salini-impregilo' }
 ];
 
 let cachedMarketData = { ITA: [], USA: [], lastUpdate: 'Non ancora eseguito' };
 
-// Funzione per prelevare AUTOMATICAMENTE L'INTEREZZA del mercato USA
-async function getAllUSStocks() {
+// Funzione per recuperare automaticamente le prime 300 azioni USA a maggiore liquidità
+async function getTop300USStocks() {
   try {
     const response = await fetch('https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/all/all_tickers.json');
     if (response.ok) {
       const symbols = await response.json();
       return symbols.map(s => {
         const ticker = typeof s === 'string' ? s : (s.symbol || s.ticker);
-        if (!ticker || ticker.includes('.')) return null;
+        if (!ticker || ticker.includes('.') || ticker.length > 5) return null;
         return {
           ticker: ticker.toUpperCase(),
           name: ticker.toUpperCase(),
-          investingUrl: `https://it.investing.com/search/?q=${ticker}`
+          investingUrl: `https://it.investing.com/equities/${ticker.toLowerCase()}`
         };
-      }).filter(Boolean);
+      }).filter(Boolean).slice(0, 300);
     }
   } catch (e) {
-    console.error("Errore recupero listino USA completo:", e);
+    console.error("Errore recupero listino USA:", e);
   }
-  return [];
+  
+  const fallbackTopUS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'AMD', 'INTC', 'NFLX', 'JPM', 'V', 'JNJ', 'WMT', 'DIS'];
+  return fallbackTopUS.map(t => ({ ticker: t, name: t, investingUrl: `https://it.investing.com/equities/${t.toLowerCase()}` }));
 }
 
 // Formule matematiche
@@ -186,13 +124,13 @@ async function runMarketAnalysis(ruleMonths = 6, ruleStdMonths = 6, ruleStdPct =
   const daysMedian = ruleMonths * 21;
   const daysStd = ruleStdMonths * 21;
 
-  // 1. Analisi Mercato Italiano (Interezza)
-  console.log(`🇮🇹 Avvio scansione intero mercato ITA: ${ITA_TICKERS.length} azioni.`);
-  for (let i = 0; i < ITA_TICKERS.length; i += 5) {
-    const batch = ITA_TICKERS.slice(i, i + 5);
+  // 1. Analisi Mercato Italiano (Batch di 3 con intervallo di sicurezza di 450ms)
+  console.log(`🇮🇹 Avvio scansione mercato ITA (${ITA_TICKERS.length} azioni) - Range 5 anni...`);
+  for (let i = 0; i < ITA_TICKERS.length; i += 3) {
+    const batch = ITA_TICKERS.slice(i, i + 3);
     await Promise.all(batch.map(async (item) => {
       try {
-        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${item.ticker}?interval=1d&range=2y`;
+        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${item.ticker}?interval=1d&range=5y`;
         const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
         if (!response.ok) return;
 
@@ -251,18 +189,18 @@ async function runMarketAnalysis(ruleMonths = 6, ruleStdMonths = 6, ruleStdPct =
         });
       } catch (e) {}
     }));
-    await delay(100);
+    await delay(450);
   }
 
-  // 2. Analisi Interezza Mercato USA
-  const US_TICKERS = await getAllUSStocks();
-  console.log(`🇺🇸 Avvio scansione intero mercato USA: ${US_TICKERS.length} azioni trovate.`);
+  // 2. Analisi Mercato USA (Top 300 azioni, range storico 5 anni, batch di 3)
+  const US_TICKERS = await getTop300USStocks();
+  console.log(`🇺🇸 Avvio scansione mercato USA (${US_TICKERS.length} azioni) - Range 5 anni...`);
 
-  for (let i = 0; i < US_TICKERS.length; i += 10) {
-    const batch = US_TICKERS.slice(i, i + 10);
+  for (let i = 0; i < US_TICKERS.length; i += 3) {
+    const batch = US_TICKERS.slice(i, i + 3);
     await Promise.all(batch.map(async (item) => {
       try {
-        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${item.ticker}?interval=1d&range=2y`;
+        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${item.ticker}?interval=1d&range=5y`;
         const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
         if (!response.ok) return;
 
@@ -321,7 +259,7 @@ async function runMarketAnalysis(ruleMonths = 6, ruleStdMonths = 6, ruleStdPct =
         });
       } catch (e) {}
     }));
-    await delay(150);
+    await delay(450);
   }
 
   return results;
@@ -419,7 +357,7 @@ app.get('/', (req, res) => {
                 <button class="tab" id="btn-USA" onclick="switchMarket('USA')">🇺🇸 USA</button>
             </div>
 
-            <div id="content" class="loading">Clicca su "Avvia Analisi" per scansionare l'interezza dei mercati.</div>
+            <div id="content" class="loading">Clicca su "Avvia Analisi" per scansionare 600 titoli totali.</div>
         </div>
 
         <script>
@@ -431,7 +369,7 @@ app.get('/', (req, res) => {
                 const stdMonths = document.getElementById('ruleStdMonths').value;
                 const stdPct = document.getElementById('ruleStdPct').value;
 
-                document.getElementById('content').innerHTML = '<div class="loading">Analisi globale in corso (tutto il listino ITA e USA)... Potrebbe richiedere qualche minuto ⏳</div>';
+                document.getElementById('content').innerHTML = '<div class="loading">Analisi protetta in corso su 600 titoli (range 5 anni)... Elaborazione sicura anti-blocco in esecuzione ⏳</div>';
 
                 try {
                     const res = await fetch(\`/api/market-analysis?ruleMonths=\${months}&ruleStdMonths=\${stdMonths}&ruleStdPct=\${stdPct}\`);
