@@ -7,7 +7,7 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// MERCATO ITALIANO (Con link di ricerca diretto e infallibile su Investing.com)
+// MERCATO ITALIANO (Con link diretto alla pagina delle azioni su Borsa Italiana/Investing)
 const ITA_TICKERS = [
   { ticker: 'A2A.MI', name: 'A2A S.p.A.' },
   { ticker: 'AMP.MI', name: 'Amplifon S.p.A.' },
@@ -78,7 +78,7 @@ const ITA_TICKERS = [
   { ticker: 'WEBL.MI', name: 'Webuild S.p.A.' }
 ].map(item => ({
   ...item,
-  investingUrl: `https://it.investing.com/search/?q=${encodeURIComponent(item.ticker.replace('.MI', ''))}`
+  investingUrl: `https://it.investing.com/equities/${item.ticker.replace('.MI', '').toLowerCase()}`
 }));
 
 let cachedMarketData = { ITA: [], USA: [], lastUpdate: 'Non ancora eseguito' };
