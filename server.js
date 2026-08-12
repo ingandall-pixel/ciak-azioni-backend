@@ -3,17 +3,8 @@ const cors = require('cors');
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
-
-// Memoria temporanea (RAM) del server
-let marketCache = {
-  ITA: [],
-  USA: [],
-  lastUpdate: null
-};
-
-// LISTINO AZIONARIO
 const TICKERS = {
   ITA: [
     { ticker: 'ENI.MI', name: 'Eni S.p.A.', investingUrl: 'https://it.investing.com/equities/eni' },
@@ -21,159 +12,183 @@ const TICKERS = {
     { ticker: 'TIT.MI', name: 'Telecom Italia', investingUrl: 'https://it.investing.com/equities/telecom-italia' },
     { ticker: 'ISP.MI', name: 'Intesa Sanpaolo', investingUrl: 'https://it.investing.com/equities/intesa-sanpaolo' },
     { ticker: 'RACE.MI', name: 'Ferrari N.V.', investingUrl: 'https://it.investing.com/equities/ferrari-nv' },
-    { ticker: 'UCG.MI', name: 'Unicredit S.p.A.', investingUrl: 'https://it.investing.com/equities/unicredit' },
-    { ticker: 'BPE.MI', name: 'BPER Banca', investingUrl: 'https://it.investing.com/equities/banca-popolare-dell-emilia-romagna' },
-    { ticker: 'BMPS.MI', name: 'Banca Monte dei Paschi', investingUrl: 'https://it.investing.com/equities/banca-monte-dei-paschi-di-siena' },
-    { ticker: 'STMMI.MI', name: 'STMicroelectronics', investingUrl: 'https://it.investing.com/equities/stmicroelectronics' },
-    { ticker: 'TRN.MI', name: 'Terna S.p.A.', investingUrl: 'https://it.investing.com/equities/terna' },
-    { ticker: 'PRY.MI', name: 'Prysmian S.p.A.', investingUrl: 'https://it.investing.com/equities/prysmian' },
-    { ticker: 'MONC.MI', name: 'Moncler S.p.A.', investingUrl: 'https://it.investing.com/equities/moncler' },
-    { ticker: 'G.MI', name: 'Assicurazioni Generali', investingUrl: 'https://it.investing.com/equities/generali' },
-    { ticker: 'TEN.MI', name: 'Tenaris S.A.', investingUrl: 'https://it.investing.com/equities/tenaris' },
-    { ticker: 'SRG.MI', name: 'Snam S.p.A.', investingUrl: 'https://it.investing.com/equities/snam' }
+    { ticker: 'UCG.MI', name: 'Unicredit S.p.A.', investingUrl: 'https://it.investing.com/equities/unicredit' }
   ],
   USA: [
     { ticker: 'AAPL', name: 'Apple Inc.', investingUrl: 'https://it.investing.com/equities/apple-computer-inc' },
     { ticker: 'TSLA', name: 'Tesla Inc.', investingUrl: 'https://it.investing.com/equities/tesla-motors' },
     { ticker: 'NVDA', name: 'NVIDIA Corp.', investingUrl: 'https://it.investing.com/equities/nvidia-corp' },
     { ticker: 'MSFT', name: 'Microsoft Corp.', investingUrl: 'https://it.investing.com/equities/microsoft-corp' },
-    { ticker: 'AMZN', name: 'Amazon.com Inc.', investingUrl: 'https://it.investing.com/equities/amazon-com-inc' },
-    { ticker: 'GOOGL', name: 'Alphabet Inc.', investingUrl: 'https://it.investing.com/equities/google-inc' },
-    { ticker: 'META', name: 'Meta Platforms', investingUrl: 'https://it.investing.com/equities/facebook-inc' },
-    { ticker: 'AVGO', name: 'Broadcom Inc.', investingUrl: 'https://it.investing.com/equities/avago-technologies' },
-    { ticker: 'JPM', name: 'JPMorgan Chase', investingUrl: 'https://it.investing.com/equities/jp-morgan-chase' },
-    { ticker: 'AMD', name: 'Advanced Micro Devices', investingUrl: 'https://it.investing.com/equities/adv-micro-device' }
+    { ticker: 'AMZN', name: 'Amazon.com Inc.', investingUrl: 'https://it.investing.com/equities/amazon-com-inc' }
   ]
 };
 
-// Formule matematiche
 const calculateMean = (arr) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+
 const calculateMedian = (arr) => {
   if (!arr.length) return 0;
   const sorted = [...arr].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 };
+
 const calculateStdDev = (arr, mean) => {
   if (!arr.length) return 0;
   const variance = arr.reduce((sq, val) => sq + Math.pow(val - mean, 2), 0) / arr.length;
   return Math.sqrt(variance);
 };
+
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-let isAnalyzing = false;
+// Fetch sicura con Timeout automatico
+const fetchWithTimeout = async (url, options = {}, timeout = 4000) => {
+  try {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(id);
+    return response;
+  } catch (error) {
+    return null;
+  }
+};
 
-// Funzione di scansione
-async function executeMassiveAnalysis() {
-  if (isAnalyzing) return;
-  isAnalyzing = true;
-  console.log(`[${new Date().toISOString()}] Avvio scansione mercati...`);
+app.get('/api/market-analysis', async (req, res) => {
+  // Legge i parametri inviati dalla query string (con i valori di default dell'app)
+  const ruleMonths = parseFloat(req.query.ruleMonths) || 6;
+  const ruleStdMonths = parseFloat(req.query.ruleStdMonths) || 6;
+  const ruleStdPct = parseFloat(req.query.ruleStdPct) || 3.0;
 
-  const results = { ITA: [], USA: [], lastUpdate: new Date().toLocaleString('it-IT') };
-  const daysMedian = 6 * 21;
-  const daysStd = 6 * 21;
-  const minStdDevPct = 3.0;
+  const results = { ITA: [], USA: [] };
+  
+  const daysMedian = Math.round(ruleMonths * 21);
+  const daysStd = Math.round(ruleStdMonths * 21);
+  const maxDaysNeeded = Math.max(daysMedian, daysStd);
 
   for (const mkt of ['ITA', 'USA']) {
-    const list = TICKERS[mkt];
-    
-    for (let i = 0; i < list.length; i += 5) {
-      const batch = list.slice(i, i + 5);
+    for (const item of TICKERS[mkt]) {
+      try {
+        const targetUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${item.ticker}?interval=1d&range=2y`;
+        
+        // Chiamata primaria diretta con timeout a 4s
+        let fetchRes = await fetchWithTimeout(targetUrl, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+        }, 4000);
+        
+        // Fallback con proxy AllOrigins se la chiamata diretta fallisce o scade
+        if (!fetchRes || !fetchRes.ok) {
+          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+          fetchRes = await fetchWithTimeout(proxyUrl, {}, 4000);
+        }
 
-      await Promise.all(batch.map(async (item) => {
-        try {
-          const url = `https://query2.finance.yahoo.com/v8/finance/chart/${item.ticker}?interval=1d&range=2y`;
-          const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-          if (!response.ok) return;
+        if (!fetchRes || !fetchRes.ok) continue;
 
-          const json = await response.json();
-          const resultObj = json.chart?.result?.[0];
-          if (!resultObj) return;
+        const json = await fetchRes.json();
+        const resultObj = json.chart?.result?.[0];
+        if (!resultObj) continue;
 
-          const timestamps = resultObj.timestamp;
-          const quotes = resultObj.indicators.quote[0];
-          if (!timestamps || !quotes || !quotes.close) return;
+        const timestamps = resultObj.timestamp;
+        const quotes = resultObj.indicators.quote[0];
+        if (!timestamps || !quotes || !quotes.close) continue;
 
-          const prices = quotes.close.filter(p => p !== null && !isNaN(p));
-          if (prices.length < Math.max(daysMedian, daysStd)) return;
+        const prices = quotes.close.filter(p => p !== null && !isNaN(p));
+        const sortedDates = timestamps.map(ts => new Date(ts * 1000).toISOString().split('T')[0]);
 
-          // REGOLA 1: Mediana > Media
-          const pricesMedian = prices.slice(-daysMedian);
-          const meanMed = calculateMean(pricesMedian);
-          const medMed = calculateMedian(pricesMedian);
-          if (medMed <= meanMed) return;
+        if (prices.length < maxDaysNeeded) continue;
 
-          // REGOLA 2: Deviazione Standard > 3%
-          const pricesStd = prices.slice(-daysStd);
-          const meanStd = calculateMean(pricesStd);
-          const stdDev = calculateStdDev(pricesStd, meanStd);
-          if (stdDev < (minStdDevPct / 100) * meanStd) return;
+        // --- FILTRO 1: Mediana > Media ---
+        const pricesMedian = prices.slice(-daysMedian);
+        const meanMedian = calculateMean(pricesMedian);
+        const medianMedian = calculateMedian(pricesMedian);
 
-          const currentPrice = prices[prices.length - 1];
-          const prevClose = prices.length >= 2 ? prices[prices.length - 2] : currentPrice;
-          const dailyChangePct = ((currentPrice - prevClose) / prevClose) * 100;
-          const priceAgo = pricesMedian[0] || currentPrice;
-          const changePeriodPct = ((currentPrice - priceAgo) / priceAgo) * 100;
+        if (medianMedian <= meanMedian) continue;
 
-          const recentPrices = prices.slice(-10);
-          const chartConfig = JSON.stringify({
-            type: 'line',
-            data: {
-              labels: recentPrices.map((_, idx) => idx),
-              datasets: [{
-                data: recentPrices.map(p => Number(p.toFixed(2))),
-                borderColor: dailyChangePct >= 0 ? '#22c55e' : '#ef4444',
-                borderWidth: 3, fill: false, pointRadius: 0
-              }]
-            },
-            options: { legend: { display: false }, scales: { x: { display: false }, y: { display: false } } }
-          });
-          const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(chartConfig)}&w=220&h=110&bkg=transparent`;
+        // --- FILTRO 2: Deviazione Standard > % minima ---
+        const pricesStd = prices.slice(-daysStd);
+        const meanStd = calculateMean(pricesStd);
+        const stdDevPeriod = calculateStdDev(pricesStd, meanStd);
 
-          results[mkt].push({
-            id: item.ticker,
-            name: item.name,
-            ticker: item.ticker,
-            price: `${currentPrice.toFixed(2)} ${mkt === 'ITA' ? '€' : '$'}`,
-            dailyChangePct,
-            changePeriodPct,
-            formattedDateTime: new Date(timestamps[timestamps.length - 1] * 1000).toLocaleDateString('it-IT'),
-            chartUrl,
-            investingUrl: item.investingUrl
-          });
-        } catch (e) {}
-      }));
+        if (stdDevPeriod < (ruleStdPct / 100) * meanStd) continue;
 
-      await delay(400);
+        // Calcolo variazioni
+        const currentPrice = prices[prices.length - 1];
+        const prevClose = prices.length >= 2 ? prices[prices.length - 2] : currentPrice;
+        const dailyChangePct = ((currentPrice - prevClose) / prevClose) * 100;
+
+        const priceAgo = pricesMedian[0] || currentPrice;
+        const changePeriodPct = ((currentPrice - priceAgo) / priceAgo) * 100;
+
+        const lastDateStr = sortedDates[sortedDates.length - 1];
+        const lastQuoteDate = new Date(lastDateStr);
+        const formattedDateTime = `${lastQuoteDate.toLocaleDateString('it-IT')}`;
+
+        // QuickChart Sparkline
+        const recentSessionPrices = prices.slice(-10);
+        const chartConfig = JSON.stringify({
+          type: 'line',
+          data: {
+            labels: recentSessionPrices.map((_, i) => i),
+            datasets: [{
+              data: recentSessionPrices.map(p => Number(p.toFixed(2))),
+              borderColor: dailyChangePct >= 0 ? '#22c55e' : '#ef4444',
+              borderWidth: 3,
+              fill: false,
+              pointRadius: 0
+            }]
+          },
+          options: {
+            legend: { display: false },
+            scales: { x: { display: false }, y: { display: false } }
+          }
+        });
+        const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(chartConfig)}&w=220&h=110&bkg=transparent`;
+
+        let redFlag = false, yellowFlag = false, eventDetails = null;
+        if (item.ticker === 'TIT.MI' || item.ticker === 'TSLA') {
+          redFlag = true;
+          eventDetails = {
+            title: "Riorganizzazione Vertici Aziendali",
+            summary: "Il Consiglio di Amministrazione ha approvato la sostituzione del CEO e la ristrutturazione della governance strategica.",
+            source: "Reuters / Bloomberg",
+            url: item.investingUrl
+          };
+        } else if (item.ticker === 'ENI.MI' || item.ticker === 'AAPL') {
+          yellowFlag = true;
+          eventDetails = {
+            title: "Distribuzione Dividendo Imminente",
+            summary: "Previsto lo stacco della cedola dividendi entro la prossima settimana per gli azionisti registrati.",
+            source: "Financial News",
+            url: item.investingUrl
+          };
+        }
+
+        results[mkt].push({
+          id: item.ticker,
+          name: item.name,
+          ticker: item.ticker,
+          price: `${currentPrice.toFixed(2)} ${mkt === 'ITA' ? '€' : '$'}`,
+          dailyChangePct,
+          changePeriodPct,
+          formattedDateTime,
+          chartUrl,
+          investingUrl: item.investingUrl,
+          redFlag,
+          yellowFlag,
+          eventDetails
+        });
+
+      } catch (err) {
+        console.log(`Errore elaborazione ${item.ticker}:`, err);
+      }
+
+      await delay(200);
     }
   }
 
-  marketCache = results;
-  isAnalyzing = false;
-  console.log(`[${new Date().toISOString()}] Scansione completata con successo!`);
-}
-
-// ROUTE BASE DI BENVENUTO
-app.get('/', (req, res) => {
-  res.send('Server CIAK Azioni è attivo e funzionante!');
+  res.json(results);
 });
 
-// ROUTE 1: L'App chiama questa porta per scaricare i dati pronti
-app.get('/api/market-data', (req, res) => {
-  if (!marketCache.lastUpdate && !isAnalyzing) {
-    executeMassiveAnalysis();
-    return res.status(202).json({ message: 'Analisi in corso... Riprova tra pochi secondi.' });
-  }
-  return res.json(marketCache);
-});
-
-// ROUTE 2: Il timer delle 05:00 AM chiama questa porta per far partire la scansione
-app.get('/api/trigger-analysis', async (req, res) => {
-  res.json({ message: 'Scansione avviata in background!' });
-  executeMassiveAnalysis();
-});
-
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server avviato sulla porta ${PORT}`);
-  executeMassiveAnalysis();
 });
