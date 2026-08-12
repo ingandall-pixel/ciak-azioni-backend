@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const cron = require('node-cron');
 
 const app = express();
 app.use(cors());
@@ -39,6 +40,9 @@ const TICKERS = {
   ]
 };
 
+// Cache globale per salvare i risultati dell'analisi automatica
+let cachedMarketData = { ITA: [], USA: [], lastUpdate: 'Non ancora eseguito' };
+
 // Formule matematiche
 const calculateMean = (arr) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 const calculateMedian = (arr) => {
@@ -54,12 +58,8 @@ const calculateStdDev = (arr, mean) => {
 };
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// API PRINCIPALE DI ANALISI CON REGOLE PERSONALIZZABILI
-app.get('/api/market-analysis', async (req, res) => {
-  const ruleMonths = parseInt(req.query.ruleMonths) || 6;
-  const ruleStdMonths = parseInt(req.query.ruleStdMonths) || 6;
-  const ruleStdPct = parseFloat(req.query.ruleStdPct) || 3.0;
-
+// Funzione core di analisi
+async function runMarketAnalysis(ruleMonths = 6, ruleStdMonths = 6, ruleStdPct = 3.0) {
   const results = { ITA: [], USA: [], lastUpdate: new Date().toLocaleString('it-IT') };
   const daysMedian = ruleMonths * 21;
   const daysStd = ruleStdMonths * 21;
@@ -87,13 +87,11 @@ app.get('/api/market-analysis', async (req, res) => {
           const prices = quotes.close.filter(p => p !== null && !isNaN(p));
           if (prices.length < Math.max(daysMedian, daysStd)) return;
 
-          // REGOLA 1: Mediana > Media
           const pricesMedian = prices.slice(-daysMedian);
           const meanMed = calculateMean(pricesMedian);
           const medMed = calculateMedian(pricesMedian);
           if (medMed <= meanMed) return;
 
-          // REGOLA 2: Deviazione Standard > Soglia %
           const pricesStd = prices.slice(-daysStd);
           const meanStd = calculateMean(pricesStd);
           const stdDev = calculateStdDev(pricesStd, meanStd);
@@ -137,7 +135,36 @@ app.get('/api/market-analysis', async (req, res) => {
       await delay(200);
     }
   }
+  return results;
+}
 
+// SCHEDULAZIONE CRON: Ogni giorno alle ore 05:00 AM (Fuso orario Roma)
+cron.schedule('0 5 * * *', async () => {
+  console.log('⏰ [CRON] Avvio analisi automatica programmata delle 05:00 AM...');
+  try {
+    cachedMarketData = await runMarketAnalysis();
+    console.log('✅ [CRON] Analisi automatica completata con successo!');
+  } catch (err) {
+    console.error('❌ [CRON] Errore durante l\'analisi automatica:', err);
+  }
+}, {
+  scheduled: true,
+  timezone: "Europe/Rome"
+});
+
+// API DI ANALISI
+app.get('/api/market-analysis', async (req, res) => {
+  const ruleMonths = parseInt(req.query.ruleMonths) || 6;
+  const ruleStdMonths = parseInt(req.query.ruleStdMonths) || 6;
+  const ruleStdPct = parseFloat(req.query.ruleStdPct) || 3.0;
+
+  // Se i filtri sono quelli predefiniti, restituisce la cache calcolata dal cron o la calcola al volo
+  if (ruleMonths === 6 && ruleStdMonths === 6 && ruleStdPct === 3.0 && cachedMarketData.ITA.length > 0) {
+    return res.json(cachedMarketData);
+  }
+
+  // Altrimenti esegue l'analisi con i parametri personalizzati richiesti
+  const results = await runMarketAnalysis(ruleMonths, ruleStdMonths, ruleStdPct);
   res.json(results);
 });
 
@@ -149,7 +176,7 @@ app.get('/', (req, res) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>CIAK! AZIONI</title>
+        <title>CIAK! AZIONI 🖕</title>
         <style>
             body { font-family: Arial, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
             .container { max-width: 850px; margin: 0 auto; }
