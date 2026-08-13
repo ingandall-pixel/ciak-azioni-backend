@@ -7,83 +7,93 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// MERCATO ITALIANO (Con link diretto alla pagina delle azioni su Borsa Italiana/Investing)
+// API Key opzionale per Twelve Data (prezzo realtime sulle finaliste)
+const TWELVE_DATA_API_KEY = process.env.TWELVE_DATA_API_KEY || '';
+
+// 🇮🇹 LISTINO MERCATO ITALIANO (Esteso + Slug specifici per Investing.com)
 const ITA_TICKERS = [
-  { ticker: 'A2A.MI', name: 'A2A S.p.A.' },
-  { ticker: 'AMP.MI', name: 'Amplifon S.p.A.' },
-  { ticker: 'ANL.MI', name: 'Alkemy S.p.A.' },
-  { ticker: 'ARIS.MI', name: 'Ariston Holding N.V.' },
-  { ticker: 'AZM.MI', name: 'Azimut Holding S.p.A.' },
-  { ticker: 'BGN.MI', name: 'Banca Generali S.p.A.' },
-  { ticker: 'BMED.MI', name: 'Banca Mediolanum S.p.A.' },
-  { ticker: 'BPE.MI', name: 'BPER Banca S.p.A.' },
-  { ticker: 'BMPS.MI', name: 'Banca Monte dei Paschi di Siena' },
-  { ticker: 'BAMI.MI', name: 'Banco BPM S.p.A.' },
-  { ticker: 'BZU.MI', name: 'Buzzi Unicem S.p.A.' },
-  { ticker: 'CPR.MI', name: 'Davide Campari-Milano N.V.' },
-  { ticker: 'DIA.MI', name: 'Diasorin S.p.A.' },
-  { ticker: 'ENEL.MI', name: 'Enel S.p.A.' },
-  { ticker: 'ENI.MI', name: 'Eni S.p.A.' },
-  { ticker: 'ERG.MI', name: 'ERG S.p.A.' },
-  { ticker: 'EXO.MI', name: 'Exor N.V.' },
-  { ticker: 'RACE.MI', name: 'Ferrari N.V.' },
-  { ticker: 'FNM.MI', name: 'FinecoBank S.p.A.' },
-  { ticker: 'G.MI', name: 'Assicurazioni Generali S.p.A.' },
-  { ticker: 'HER.MI', name: 'Hera S.p.A.' },
-  { ticker: 'ISP.MI', name: 'Intesa Sanpaolo S.p.A.' },
-  { ticker: 'IG.MI', name: 'Italgas S.p.A.' },
-  { ticker: 'LION.MI', name: 'Leonardo S.p.A.' },
-  { ticker: 'MB.MI', name: 'Mediobanca S.p.A.' },
-  { ticker: 'MIRC.MI', name: 'Maire Tecnimont S.p.A.' },
-  { ticker: 'MONC.MI', name: 'Moncler S.p.A.' },
-  { ticker: 'NEXI.MI', name: 'Nexi S.p.A.' },
-  { ticker: 'PRY.MI', name: 'Prysmian S.p.A.' },
-  { ticker: 'REC.MI', name: 'Recordati S.p.A.' },
-  { ticker: 'SFER.MI', name: 'Salvatore Ferragamo S.p.A.' },
-  { ticker: 'SPM.MI', name: 'Saipem S.p.A.' },
-  { ticker: 'SRG.MI', name: 'Snam S.p.A.' },
-  { ticker: 'STLAM.MI', name: 'Stellantis N.V.' },
-  { ticker: 'STMMI.MI', name: 'STMicroelectronics N.V.' },
-  { ticker: 'TIT.MI', name: 'Telecom Italia S.p.A.' },
-  { ticker: 'TEN.MI', name: 'Tenaris S.A.' },
-  { ticker: 'TRN.MI', name: 'Terna S.p.A.' },
-  { ticker: 'UCG.MI', name: 'Unicredit S.p.A.' },
-  { ticker: 'UNI.MI', name: 'Unipol Gruppo S.p.A.' },
-  { ticker: 'IP.MI', name: 'Gruppo API IP' },
-  { ticker: 'MAR.MI', name: 'Marr S.p.A.' },
-  { ticker: 'SAMI.MI', name: 'Safilo Group S.p.A.' },
-  { ticker: 'TOS.MI', name: 'Toscana Aeroporti S.p.A.' },
-  { ticker: 'BFF.MI', name: 'BFF Bank S.p.A.' },
-  { ticker: 'ACE.MI', name: 'Acea' },
-  { ticker: 'ANIM.MI', name: 'Anima Holding' },
-  { ticker: 'BRC.MI', name: 'Brembo' },
-  { ticker: 'FCT.MI', name: 'Fincantieri' },
-  { ticker: 'IPG.MI', name: 'Interpump Group' },
-  { ticker: 'LUVE.MI', name: 'Lu-Ve' },
-  { ticker: 'MAIRE.MI', name: 'Maire Tecnimont' },
-  { ticker: 'PIRC.MI', name: 'Pirelli & C.' },
-  { ticker: 'IGD.MI', name: 'IGD SIIQ S.p.A.' },
-  { ticker: 'SAB.MI', name: 'Saras S.p.A.' },
-  { ticker: 'DADA.MI', name: 'Digital Bros S.p.A.' },
-  { ticker: 'OVS.MI', name: 'OVS S.p.A.' },
-  { ticker: 'TIN.MI', name: 'Tiscali S.p.A.' },
-  { ticker: 'SOL.MI', name: 'SOL S.p.A.' },
-  { ticker: 'AVIO.MI', name: 'Avio S.p.A.' },
-  { ticker: 'SECM.MI', name: 'Seco S.p.A.' },
-  { ticker: 'TYN.MI', name: 'Tamburi Investment Partners' },
-  { ticker: 'REVO.MI', name: 'Revo Insurance S.p.A.' },
-  { ticker: 'SIT.MI', name: 'SIT S.p.A.' },
-  { ticker: 'JUVE.MI', name: 'Juventus Football Club' },
-  { ticker: 'LKT.MI', name: 'Lottomatica Group' },
-  { ticker: 'WEBL.MI', name: 'Webuild S.p.A.' }
-].map(item => ({
-  ...item,
-  investingUrl: `https://it.investing.com/equities/${item.ticker.replace('.MI', '').toLowerCase()}`
-}));
+  { ticker: 'A2A.MI', name: 'A2A S.p.A.', slug: 'a2a' },
+  { ticker: 'AMP.MI', name: 'Amplifon S.p.A.', slug: 'amplifon' },
+  { ticker: 'ANL.MI', name: 'Alkemy S.p.A.', slug: 'alkemy-spa' },
+  { ticker: 'ARIS.MI', name: 'Ariston Holding N.V.', slug: 'ariston-holding' },
+  { ticker: 'AZM.MI', name: 'Azimut Holding S.p.A.', slug: 'azimut' },
+  { ticker: 'BGN.MI', name: 'Banca Generali S.p.A.', slug: 'bca-generali' },
+  { ticker: 'BMED.MI', name: 'Banca Mediolanum S.p.A.', slug: 'bca-mediolanum' },
+  { ticker: 'BPE.MI', name: 'BPER Banca S.p.A.', slug: 'bper-banca' },
+  { ticker: 'BMPS.MI', name: 'Banca Monte dei Paschi di Siena', slug: 'bca-paschi-siena' },
+  { ticker: 'BAMI.MI', name: 'Banco BPM S.p.A.', slug: 'banco-bpm-spa' },
+  { ticker: 'BZU.MI', name: 'Buzzi Unicem S.p.A.', slug: 'buzzi-unicem' },
+  { ticker: 'CPR.MI', name: 'Davide Campari-Milano N.V.', slug: 'campari' },
+  { ticker: 'DIA.MI', name: 'Diasorin S.p.A.', slug: 'diasorin' },
+  { ticker: 'ENEL.MI', name: 'Enel S.p.A.', slug: 'enel' },
+  { ticker: 'ENI.MI', name: 'Eni S.p.A.', slug: 'eni' },
+  { ticker: 'ERG.MI', name: 'ERG S.p.A.', slug: 'erg' },
+  { ticker: 'EXO.MI', name: 'Exor N.V.', slug: 'exor-holding' },
+  { ticker: 'RACE.MI', name: 'Ferrari N.V.', slug: 'ferrari-nv' },
+  { ticker: 'FNM.MI', name: 'FinecoBank S.p.A.', slug: 'finecobank' },
+  { ticker: 'G.MI', name: 'Assicurazioni Generali S.p.A.', slug: 'generali' },
+  { ticker: 'HER.MI', name: 'Hera S.p.A.', slug: 'hera' },
+  { ticker: 'ISP.MI', name: 'Intesa Sanpaolo S.p.A.', slug: 'intesa-sanpaolo' },
+  { ticker: 'IG.MI', name: 'Italgas S.p.A.', slug: 'italgas-spa' },
+  { ticker: 'LION.MI', name: 'Leonardo S.p.A.', slug: 'finmeccanica' },
+  { ticker: 'MB.MI', name: 'Mediobanca S.p.A.', slug: 'mediobanca' },
+  { ticker: 'MIRC.MI', name: 'Maire Tecnimont S.p.A.', slug: 'maire-tecnimont' },
+  { ticker: 'MONC.MI', name: 'Moncler S.p.A.', slug: 'moncler' },
+  { ticker: 'NEXI.MI', name: 'Nexi S.p.A.', slug: 'nexi-spa' },
+  { ticker: 'PRY.MI', name: 'Prysmian S.p.A.', slug: 'prysmian' },
+  { ticker: 'REC.MI', name: 'Recordati S.p.A.', slug: 'recordati' },
+  { ticker: 'SFER.MI', name: 'Salvatore Ferragamo S.p.A.', slug: 'salvatore-ferragamo' },
+  { ticker: 'SPM.MI', name: 'Saipem S.p.A.', slug: 'saipem' },
+  { ticker: 'SRG.MI', name: 'Snam S.p.A.', slug: 'snam' },
+  { ticker: 'STLAM.MI', name: 'Stellantis N.V.', slug: 'stellantis-nv' },
+  { ticker: 'STMMI.MI', name: 'STMicroelectronics N.V.', slug: 'stmicroelectronics' },
+  { ticker: 'TIT.MI', name: 'Telecom Italia S.p.A.', slug: 'telecom-italia' },
+  { ticker: 'TEN.MI', name: 'Tenaris S.A.', slug: 'tenaris' },
+  { ticker: 'TRN.MI', name: 'Terna S.p.A.', slug: 'terna' },
+  { ticker: 'UCG.MI', name: 'Unicredit S.p.A.', slug: 'unicredit' },
+  { ticker: 'UNI.MI', name: 'Unipol Gruppo S.p.A.', slug: 'unipol' },
+  { ticker: 'IP.MI', name: 'Gruppo API IP', slug: 'interpump-group' },
+  { ticker: 'MAR.MI', name: 'Marr S.p.A.', slug: 'marr' },
+  { ticker: 'SAMI.MI', name: 'Safilo Group S.p.A.', slug: 'safilo-group' },
+  { ticker: 'TOS.MI', name: 'Toscana Aeroporti S.p.A.', slug: 'toscana-aeroporti' },
+  { ticker: 'BFF.MI', name: 'BFF Bank S.p.A.', slug: 'bff-bank-spa' },
+  { ticker: 'ACE.MI', name: 'Acea S.p.A.', slug: 'acea' },
+  { ticker: 'ANIM.MI', name: 'Anima Holding', slug: 'anima-holding' },
+  { ticker: 'BRC.MI', name: 'Brembo S.p.A.', slug: 'brembo' },
+  { ticker: 'FCT.MI', name: 'Fincantieri S.p.A.', slug: 'fincantieri' },
+  { ticker: 'IPG.MI', name: 'Interpump Group S.p.A.', slug: 'interpump-group' },
+  { ticker: 'LUVE.MI', name: 'Lu-Ve S.p.A.', slug: 'lu-ve-spa' },
+  { ticker: 'PIRC.MI', name: 'Pirelli & C. S.p.A.', slug: 'pirelli-and-c' },
+  { ticker: 'IGD.MI', name: 'IGD SIIQ S.p.A.', slug: 'immobiliare-grande-distribuzione' },
+  { ticker: 'DADA.MI', name: 'Digital Bros S.p.A.', slug: 'digital-bros' },
+  { ticker: 'OVS.MI', name: 'OVS S.p.A.', slug: 'ovs-spa' },
+  { ticker: 'TIN.MI', name: 'Tiscali S.p.A.', slug: 'tiscali' },
+  { ticker: 'SOL.MI', name: 'SOL S.p.A.', slug: 'sol' },
+  { ticker: 'AVIO.MI', name: 'Avio S.p.A.', slug: 'avio-spa' },
+  { ticker: 'SECM.MI', name: 'Seco S.p.A.', slug: 'seco-spa' },
+  { ticker: 'TYN.MI', name: 'Tamburi Investment Partners', slug: 'tamburi-invest' },
+  { ticker: 'REVO.MI', name: 'Revo Insurance S.p.A.', slug: 'revo-insurance-spa' },
+  { ticker: 'SIT.MI', name: 'SIT S.p.A.', slug: 'sit-spa' },
+  { ticker: 'JUVE.MI', name: 'Juventus Football Club', slug: 'juventus-fc' },
+  { ticker: 'LKT.MI', name: 'Lottomatica Group', slug: 'lottomatica-group-spa' },
+  { ticker: 'WEBL.MI', name: 'Webuild S.p.A.', slug: 'salini-impregilo' }
+];
 
 let cachedMarketData = { ITA: [], USA: [], lastUpdate: 'Non ancora eseguito' };
 
-// Funzione per recuperare automaticamente le prime 300 azioni USA
+// Generatore di URL diretto per Investing.com
+function getInvestingUrl(item, isUSA = false) {
+  if (isUSA) {
+    return `https://it.investing.com/search/?q=${encodeURIComponent(item.ticker)}`;
+  }
+  if (item.slug) {
+    return `https://it.investing.com/equities/${item.slug}`;
+  }
+  const cleanTicker = item.ticker.replace('.MI', '').toLowerCase();
+  return `https://it.investing.com/equities/${cleanTicker}`;
+}
+
+// Recupero dinamico dei 300 titoli USA
 async function getTop300USStocks() {
   try {
     const response = await fetch('https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/all/all_tickers.json');
@@ -92,26 +102,55 @@ async function getTop300USStocks() {
       return symbols.map(s => {
         const ticker = typeof s === 'string' ? s : (s.symbol || s.ticker);
         if (!ticker || ticker.includes('.') || ticker.length > 5) return null;
-        return {
-          ticker: ticker.toUpperCase(),
-          name: ticker.toUpperCase(),
-          investingUrl: `https://it.investing.com/search/?q=${encodeURIComponent(ticker)}`
-        };
+        return { ticker: ticker.toUpperCase(), name: ticker.toUpperCase() };
       }).filter(Boolean).slice(0, 300);
     }
   } catch (e) {
     console.error("Errore recupero listino USA:", e);
   }
-  
   const fallbackTopUS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'AMD', 'INTC', 'NFLX', 'JPM', 'V', 'JNJ', 'WMT', 'DIS'];
-  return fallbackTopUS.map(t => ({ 
-    ticker: t, 
-    name: t, 
-    investingUrl: `https://it.investing.com/search/?q=${encodeURIComponent(t)}` 
-  }));
+  return fallbackTopUS.map(t => ({ ticker: t, name: t }));
 }
 
-// Formule matematiche
+// Chiamata HTTP protetta con User-Agent e Retry Anti-Blocco
+async function fetchYahooData(ticker, retries = 2) {
+  const url = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=5y`;
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7'
+  };
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(url, { headers });
+      if (response.status === 429) {
+        // Se riceviamo troppe richieste, attendiamo un momento prima di riprovare
+        await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+        continue;
+      }
+      if (!response.ok) return null;
+      return await response.json();
+    } catch (e) {
+      if (attempt === retries) return null;
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+  return null;
+}
+
+// Prezzo realtime facoltativo da Twelve Data
+async function fetchRealtimePrice(symbol) {
+  if (!TWELVE_DATA_API_KEY) return null;
+  try {
+    const res = await fetch(`https://api.twelvedata.com/price?symbol=${symbol}&apikey=${TWELVE_DATA_API_KEY}`);
+    const data = await res.json();
+    if (data && data.price) return parseFloat(data.price);
+  } catch (e) {}
+  return null;
+}
+
+// Funzioni matematiche
 const calculateMean = (arr) => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
 const calculateMedian = (arr) => {
   if (!arr.length) return 0;
@@ -126,27 +165,26 @@ const calculateStdDev = (arr, mean) => {
 };
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Funzione di scansione principale
 async function runMarketAnalysis(ruleMonths = 6, ruleStdMonths = 6, ruleStdPct = 3.0) {
   const results = { ITA: [], USA: [], lastUpdate: new Date().toLocaleString('it-IT') };
   const daysMedian = ruleMonths * 21;
   const daysStd = ruleStdMonths * 21;
 
-  // 1. Analisi Mercato Italiano
-  console.log(`🇮🇹 Avvio scansione mercato ITA (${ITA_TICKERS.length} azioni) - Range 5 anni...`);
-  for (let i = 0; i < ITA_TICKERS.length; i += 3) {
-    const batch = ITA_TICKERS.slice(i, i + 3);
+  // --- 1. MERCATO ITALIANO ---
+  console.log(`🇮🇹 Avvio scansione ITA (${ITA_TICKERS.length} azioni) con protezione anti-blocco...`);
+  const BATCH_SIZE = 4; // Processiamo 4 azioni per volta per evitare rate-limiting
+
+  for (let i = 0; i < ITA_TICKERS.length; i += BATCH_SIZE) {
+    const batch = ITA_TICKERS.slice(i, i + BATCH_SIZE);
     await Promise.all(batch.map(async (item) => {
       try {
-        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${item.ticker}?interval=1d&range=5y`;
-        const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-        if (!response.ok) return;
-
-        const json = await response.json();
-        const resultObj = json.chart?.result?.[0];
+        const json = await fetchYahooData(item.ticker);
+        const resultObj = json?.chart?.result?.[0];
         if (!resultObj) return;
 
         const timestamps = resultObj.timestamp;
-        const quotes = resultObj.indicators.quote[0];
+        const quotes = resultObj.indicators?.quote?.[0];
         if (!timestamps || !quotes || !quotes.close) return;
 
         const prices = quotes.close.filter(p => p !== null && !isNaN(p));
@@ -162,7 +200,9 @@ async function runMarketAnalysis(ruleMonths = 6, ruleStdMonths = 6, ruleStdPct =
         const stdDev = calculateStdDev(pricesStd, meanStd);
         if (stdDev < (ruleStdPct / 100) * meanStd) return;
 
-        const currentPrice = prices[prices.length - 1];
+        let currentPrice = await fetchRealtimePrice(item.ticker);
+        if (!currentPrice) currentPrice = prices[prices.length - 1];
+
         const prevClose = prices.length >= 2 ? prices[prices.length - 2] : currentPrice;
         const dailyChangePct = ((currentPrice - prevClose) / prevClose) * 100;
         const priceAgo = pricesMedian[0] || currentPrice;
@@ -192,31 +232,28 @@ async function runMarketAnalysis(ruleMonths = 6, ruleStdMonths = 6, ruleStdPct =
           changePeriodPct,
           formattedDateTime: new Date(timestamps[timestamps.length - 1] * 1000).toLocaleDateString('it-IT'),
           chartUrl,
-          investingUrl: item.investingUrl
+          investingUrl: getInvestingUrl(item, false)
         });
       } catch (e) {}
     }));
-    await delay(450);
+    // Pausa dinamica casuale (jittering) tra un batch e l'altro
+    await delay(350 + Math.random() * 300);
   }
 
-  // 2. Analisi Mercato USA
+  // --- 2. MERCATO USA ---
   const US_TICKERS = await getTop300USStocks();
-  console.log(`🇺🇸 Avvio scansione mercato USA (${US_TICKERS.length} azioni) - Range 5 anni...`);
+  console.log(`🇺🇸 Avvio scansione USA (${US_TICKERS.length} azioni) con protezione anti-blocco...`);
 
-  for (let i = 0; i < US_TICKERS.length; i += 3) {
-    const batch = US_TICKERS.slice(i, i + 3);
+  for (let i = 0; i < US_TICKERS.length; i += BATCH_SIZE) {
+    const batch = US_TICKERS.slice(i, i + BATCH_SIZE);
     await Promise.all(batch.map(async (item) => {
       try {
-        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${item.ticker}?interval=1d&range=5y`;
-        const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-        if (!response.ok) return;
-
-        const json = await response.json();
-        const resultObj = json.chart?.result?.[0];
+        const json = await fetchYahooData(item.ticker);
+        const resultObj = json?.chart?.result?.[0];
         if (!resultObj) return;
 
         const timestamps = resultObj.timestamp;
-        const quotes = resultObj.indicators.quote[0];
+        const quotes = resultObj.indicators?.quote?.[0];
         if (!timestamps || !quotes || !quotes.close) return;
 
         const prices = quotes.close.filter(p => p !== null && !isNaN(p));
@@ -232,7 +269,9 @@ async function runMarketAnalysis(ruleMonths = 6, ruleStdMonths = 6, ruleStdPct =
         const stdDev = calculateStdDev(pricesStd, meanStd);
         if (stdDev < (ruleStdPct / 100) * meanStd) return;
 
-        const currentPrice = prices[prices.length - 1];
+        let currentPrice = await fetchRealtimePrice(item.ticker);
+        if (!currentPrice) currentPrice = prices[prices.length - 1];
+
         const prevClose = prices.length >= 2 ? prices[prices.length - 2] : currentPrice;
         const dailyChangePct = ((currentPrice - prevClose) / prevClose) * 100;
         const priceAgo = pricesMedian[0] || currentPrice;
@@ -262,29 +301,26 @@ async function runMarketAnalysis(ruleMonths = 6, ruleStdMonths = 6, ruleStdPct =
           changePeriodPct,
           formattedDateTime: new Date(timestamps[timestamps.length - 1] * 1000).toLocaleDateString('it-IT'),
           chartUrl,
-          investingUrl: item.investingUrl
+          investingUrl: getInvestingUrl(item, true)
         });
       } catch (e) {}
     }));
-    await delay(450);
+    await delay(350 + Math.random() * 300);
   }
 
   return results;
 }
 
-// Schedulazione automatica alle 05:00 del mattino
+// Cronjob: Esecuzione automatica alle 05:00 del mattino
 cron.schedule('0 5 * * *', async () => {
   console.log('⏰ [CRON] Avvio analisi automatica globale dei mercati...');
   try {
     cachedMarketData = await runMarketAnalysis();
-    console.log('✅ [CRON] Analisi globale completata con successo!');
+    console.log('✅ [CRON] Analisi completata!');
   } catch (err) {
     console.error('❌ [CRON] Errore:', err);
   }
-}, {
-  scheduled: true,
-  timezone: "Europe/Rome"
-});
+}, { scheduled: true, timezone: "Europe/Rome" });
 
 app.get('/api/market-analysis', async (req, res) => {
   const ruleMonths = parseInt(req.query.ruleMonths) || 6;
@@ -320,7 +356,7 @@ app.get('/', (req, res) => {
             .tab { padding: 10px 20px; background: #1e293b; color: #94a3b8; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; }
             .tab.active { background: #2563eb; color: #ffffff; }
             .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; text-decoration: none; color: inherit; transition: 0.2s; }
-            .card:hover { border-color: #38bdf8; }
+            .card:hover { border-color: #38bdf8; transform: translateY(-2px); }
             .ticker { font-size: 18px; font-weight: bold; color: #fff; }
             .name { font-size: 12px; color: #94a3b8; }
             .price { font-size: 16px; font-weight: bold; text-align: right; }
@@ -364,7 +400,7 @@ app.get('/', (req, res) => {
                 <button class="tab" id="btn-USA" onclick="switchMarket('USA')">🇺🇸 USA</button>
             </div>
 
-            <div id="content" class="loading">Clicca su "Avvia Analisi" per scansionare 600 titoli totali.</div>
+            <div id="content" class="loading">Clicca su "Avvia Analisi" per scansionare i mercati.</div>
         </div>
 
         <script>
@@ -376,14 +412,14 @@ app.get('/', (req, res) => {
                 const stdMonths = document.getElementById('ruleStdMonths').value;
                 const stdPct = document.getElementById('ruleStdPct').value;
 
-                document.getElementById('content').innerHTML = '<div class="loading">Analisi protetta in corso su 600 titoli (range 5 anni)... Elaborazione sicura anti-blocco in esecuzione ⏳</div>';
+                document.getElementById('content').innerHTML = '<div class="loading">Scansione protetta in corso su ~360+ titoli... Elaborazione sicura in background ⏳</div>';
 
                 try {
                     const res = await fetch(\`/api/market-analysis?ruleMonths=\${months}&ruleStdMonths=\${stdMonths}&ruleStdPct=\${stdPct}\`);
                     globalData = await res.json();
                     render();
                 } catch(e) {
-                    document.getElementById('content').innerHTML = '<div class="loading" style="color:red;">Errore durante la comunicazione con il server.</div>';
+                    document.getElementById('content').innerHTML = '<div class="loading" style="color:red;">Errore di comunicazione con il server.</div>';
                 }
             }
 
@@ -407,12 +443,12 @@ app.get('/', (req, res) => {
                 const container = document.getElementById('content');
                 
                 if(list.length === 0) {
-                    container.innerHTML = '<div class="loading">Nessuna azione soddisfa i criteri attuali.</div>';
+                    container.innerHTML = '<div class="loading">Nessuna azione soddisfa i criteri selezionati.</div>';
                     return;
                 }
 
                 container.innerHTML = list.map(item => \`
-                    <a href="\${item.investingUrl}" target="_blank" class="card">
+                    <a href="\${item.investingUrl}" target="_blank" rel="noopener noreferrer" class="card">
                         <div>
                             <div class="ticker">\${item.ticker}</div>
                             <div class="name">\${item.name}</div>
