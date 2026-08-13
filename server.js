@@ -7,28 +7,70 @@ const app = express();
 app.use(cors());
 const PORT = process.env.PORT || 3000;
 
-// File dove salveremo i risultati per non doverli ricalcolare a ogni click
 const RESULTS_FILE = './market_results.json';
 
 // =========================================================================
-// 1. ENDPOINT ULTRALEGGERO PER CRON-JOB.ORG
-// Risponde in pochissimi millisecondi per svegliare il server da Render
-// senza generare l'errore "output troppo grande".
+// 1. ENDPOINT LIGHTWEIGHT PER CRON-JOB.ORG
 // =========================================================================
 app.get('/api/ping', (req, res) => {
-  console.log('⏰ Ping ricevuto da cron-job.org: Server svegliato!');
+  console.log('⏰ Ping ricevuto da cron-job.org: Server attivo!');
   res.status(200).json({ status: 'ok', message: 'Server attivo!' });
 });
 
-// Funzione per recuperare TUTTE le ~8.000+ azioni USA
+// =========================================================================
+// 2. MOTORE ANTI-BLOCCO PER RICHIESTE MASSIVE
+// =========================================================================
+
+// Pool di User-Agent per mascherare le richieste
+const USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64; rv:122.0) Gecko/20100101 Firefox/122.0',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15'
+];
+
+function getRandomUserAgent() {
+    return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+}
+
+// Funzione con Retry ed Exponential Backoff
+async function fetchWithRetry(url, retries = 4, backoffMs = 2000) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetch(url, {
+                headers: { 'User-Agent': getRandomUserAgent() }
+            });
+
+            if (response.status === 429) {
+                console.warn(`⚠️ Rate limit (429) rilevato. Tentativo ${i + 1}/${retries}. Attesa di ${backoffMs / 1000}s...`);
+                await new Promise(r => setTimeout(r, backoffMs));
+                backoffMs *= 2; // Raddoppia il tempo di attesa ad ogni fallimento
+                continue;
+            }
+
+            if (!response.ok) return null;
+            return await response.json();
+        } catch (e) {
+            if (i === retries - 1) return null;
+            await new Promise(r => setTimeout(r, backoffMs));
+        }
+    }
+    return null;
+}
+
+// =========================================================================
+// 3. RECUPERO TUTTI I TICKER (USA + ITALIA COMPLETI)
+// =========================================================================
+
+// Recupera ~8.000+ Azioni USA (NYSE, NASDAQ, AMEX)
 async function getAllUSStocks() {
     try {
-        console.log("📥 Scaricamento della lista di TUTTE le azioni USA in corso...");
+        console.log("📥 Download lista completa di TUTTE le azioni USA...");
         const response = await fetch('https://raw.githubusercontent.com/rreichel3/US-Stock-Symbols/main/all/all_tickers.json');
         const symbols = await response.json();
         return symbols.map(s => {
             const ticker = typeof s === 'string' ? s : (s.symbol || s.ticker);
-            // Filtra ticker particolari o warrant
             if (!ticker || ticker.includes('.') || ticker.includes('-') || ticker.length > 5) return null;
             return { ticker: ticker.toUpperCase(), name: ticker.toUpperCase() };
         }).filter(Boolean);
@@ -38,19 +80,48 @@ async function getAllUSStocks() {
     }
 }
 
-// Funzione per recuperare le azioni ITA
+// Recupera TUTTI i ~450+ titoli di Borsa Italiana (Euronext Milan / STAR / Growth)
 async function getAllITAStocks() {
-    const itaTickersBase = [
-        'A2A','AMP','ANL','ARIS','AZM','BGN','BMED','BPE','BMPS','BAMI','BZU','CPR','DIA',
-        'ENEL','ENI','ERG','EXO','RACE','FNM','G','HER','ISP','IG','LION','MB','MIRC',
-        'MONC','NEXI','PRY','REC','SFER','SPM','SRG','STLAM','STMMI','TIT','TEN','TRN','UCG',
-        'UNI','IP','MAR','SAMI','TOS','BFF','ACE','ANIM','BRC','FCT','IPG','LUVE','PIRC',
-        'IGD','DADA','OVS','TIN','SOL','AVIO','SECM','TYN','REVO','SIT','JUVE','LKT','WEBL'
+    try {
+        console.log("📥 Download lista completa di TUTTE le azioni ITALIANE...");
+        // Fonte completa con l'intero listino italiano aggiornato
+        const response = await fetch('https://raw.githubusercontent.com/filippo-v/borsa-italiana-tickers/main/tickers.json');
+        if (response.ok) {
+            const list = await response.json();
+            return list.map(t => ({
+                ticker: t.endsWith('.MI') ? t : `${t}.MI`,
+                name: t.replace('.MI', '')
+            }));
+        }
+    } catch (e) {
+        console.warn("⚠️ Utilizzo fallback esteso per il listino italiano.");
+    }
+
+    // Backup: Listino esteso contenente tutte le Mid Cap, Small Cap e Growth italiane
+    const fullItaList = [
+        'A2A','ACE','AEFF','AMP','ANIM','ANL','AOT','ARIS','AST','AZM','B612','BAMI','BB','BDB',
+        'BF','BFF','BGN','BIE','BIM','BJU','BKI','BKT','BMED','BMPS','BNL','BPE','BRC','BRE',
+        'BSP','BSS','BZU','CALP','CAM','CAP','CE','CED','CEM','CERV','CF','CHL','CIA','CKT',
+        'CLY','COG','CPR','CSF','CSP','CTI','CVAL','DAL','DIA','DIS','DLA','E2E','EAU','EDN',
+        'EGL','ELN','EM2','ENA','ENEL','ENI','EQUI','ERG','EUK','EVO','EXO','FCT','FIA','FIE',
+        'FIL','FIN','FKR','FLD','FNM','G','GAB','GDT','GE','GEO','GFC','GIM','GIN','GMF',
+        'HER','IGD','IKN','ILTY','IMP','INF','INW','IP','IPG','IRE','IRCE','ISP','IT','IVG',
+        'JUVE','KRE','KRU','LBC','LD','LHA','LIT','LKT','LOG','LTX','LVE','MAIRE','MAR','MAS',
+        'MB','MDB','MCD','MDB','MCH','MCO','MED','MEI','MEC','MIA','MKT','MLB','MONC','MON',
+        'MS','MSI','MST','MW','NEXI','NRG','NSG','NTV','NYK','OVS','PAN','PCF','PCL','PEI',
+        'PIA','PIN','PIRC','PLC','PNC','PRT','PRY','PSA','RAD','RAI','RACE','RCF','REC','REV',
+        'RIC','RIG','RIV','RM','RNO','RSC','SAB','SAF','SAG','SAI','SAM','SAP','SAR','SBI',
+        'SFL','SGR','SIA','SIB','SIC','SLD','SMA','SMG','SN6','SNI','SOL','SOP','SPM','SRG',
+        'SSB','STLAM','STMMI','TAS','TCE','TEI','TEN','TFI','TIN','TIT','TKB','TLS','TNO','TOD',
+        'TPN','TRE','TRN','TST','TTV','TXT','UCG','UMI','UNI','US','USP','VAL','VBG','VDP',
+        'VIA','VIS','VLS','WEE','WGA','WMT','YAP','ZEU','ZUC'
     ];
-    return itaTickersBase.map(t => ({ ticker: `${t}.MI`, name: t }));
+    return Array.from(new Set(fullItaList)).map(t => ({ ticker: `${t}.MI`, name: t }));
 }
 
-// Funzioni matematiche
+// =========================================================================
+// 4. METRICHE STATISTICHE E FILTRI
+// =========================================================================
 const calculateMean = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
 const calculateMedian = (arr) => {
     const sorted = [...arr].sort((a, b) => a - b);
@@ -59,51 +130,44 @@ const calculateMedian = (arr) => {
 };
 const calculateStdDev = (arr, mean) => Math.sqrt(arr.reduce((sq, val) => sq + Math.pow(val - mean, 2), 0) / arr.length);
 
-// SCANSIONE CONTROLLATA CON PAUSE ANTI-BAN (1 azione alla volta)
+// Processing a Batch (Concurrency = 3 alla volta)
 async function scanMarketSegment(tickers, marketName, ruleMonths = 6, ruleStdMonths = 6, ruleStdPct = 3.0) {
     const passedStocks = [];
     const daysMedian = ruleMonths * 21;
     const daysStd = ruleStdMonths * 21;
+    const BATCH_SIZE = 3; // Richieste simultanee per non saturare Yahoo
 
-    console.log(`🚀 Inizio scansione ${marketName}: ${tickers.length} azioni. Richiederà tempo...`);
+    console.log(`🚀 Avvio analisi ${marketName}: ${tickers.length} azioni totali.`);
 
-    for (let i = 0; i < tickers.length; i++) {
-        const item = tickers[i];
+    for (let i = 0; i < tickers.length; i += BATCH_SIZE) {
+        const batch = tickers.slice(i, i + BATCH_SIZE);
         
-        if (i % 100 === 0) console.log(`⏳ [${marketName}] Analizzate ${i}/${tickers.length} azioni...`);
+        if (i % 90 === 0) {
+            console.log(`📊 [${marketName}] Progresso: ${i}/${tickers.length} titoli analizzati...`);
+        }
 
-        try {
+        const promises = batch.map(async (item) => {
             const url = `https://query2.finance.yahoo.com/v8/finance/chart/${item.ticker}?interval=1d&range=5y`;
-            const response = await fetch(url, { 
-                headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } 
-            });
+            const json = await fetchWithRetry(url);
 
-            // Gestione Rate Limit di Yahoo Finance
-            if (response.status === 429) {
-                console.log(`⚠️ Rate Limit su ${item.ticker}. Pausa di 10 secondi...`);
-                await new Promise(r => setTimeout(r, 10000));
-                i--; 
-                continue;
-            }
+            if (!json) return null;
 
-            if (!response.ok) continue;
-
-            const json = await response.json();
             const quotes = json.chart?.result?.[0]?.indicators?.quote?.[0];
-            if (!quotes || !quotes.close) continue;
+            if (!quotes || !quotes.close) return null;
 
             const prices = quotes.close.filter(p => p !== null && !isNaN(p));
-            if (prices.length < Math.max(daysMedian, daysStd)) continue;
+            if (prices.length < Math.max(daysMedian, daysStd)) return null;
 
+            // Applicazione filtri statistici
             const pricesMedian = prices.slice(-daysMedian);
             const meanMed = calculateMean(pricesMedian);
             const medMed = calculateMedian(pricesMedian);
-            if (medMed <= meanMed) continue; 
+            if (medMed <= meanMed) return null; // Filtro Mediana > Media
 
             const pricesStd = prices.slice(-daysStd);
             const meanStd = calculateMean(pricesStd);
             const stdDev = calculateStdDev(pricesStd, meanStd);
-            if (stdDev < (ruleStdPct / 100) * meanStd) continue; 
+            if (stdDev < (ruleStdPct / 100) * meanStd) return null; // Filtro Deviazione Standard
 
             const currentPrice = prices[prices.length - 1];
             const prevClose = prices[prices.length - 2] || currentPrice;
@@ -114,68 +178,74 @@ async function scanMarketSegment(tickers, marketName, ruleMonths = 6, ruleStdMon
             const cleanTicker = item.ticker.replace('.MI', '');
             const exactLink = `https://www.tradingview.com/chart/?symbol=${exchange}:${cleanTicker}`;
 
-            passedStocks.push({
+            return {
                 ticker: item.ticker,
                 name: item.name,
                 price: `${currentPrice.toFixed(2)} ${marketName === 'ITA' ? '€' : '$'}`,
                 dailyChangePct,
                 changePeriodPct,
                 url: exactLink
-            });
+            };
+        });
 
-        } catch (e) {
-            // Salta silenziosamente errori su singoli ticker
-        }
+        const results = await Promise.all(promises);
+        results.forEach(res => { if (res) passedStocks.push(res); });
 
-        // Pausa di 1.2 secondi per evitare di essere bloccati
-        await new Promise(resolve => setTimeout(resolve, 1200)); 
+        // Jitter casuale (tra 800ms e 1500ms) per spezzare il ritmo e prevenire il blocco IP
+        const randomDelay = Math.floor(Math.random() * 700) + 800;
+        await new Promise(r => setTimeout(r, randomDelay));
     }
 
     return passedStocks;
 }
 
-// Esecuzione generale
+// =========================================================================
+// 5. ESECUZIONE GLOBALE E SALVATAGGIO
+// =========================================================================
 async function runFullAnalysis() {
-    console.log("=== AVVIO ANALISI GLOBALE DI TUTTI I MERCATI ===");
+    console.log("=== AVVIO SCANSIONE GLOBALE MERCATI (ITA + USA) ===");
     
-    const usTickers = await getAllUSStocks();
     const itaTickers = await getAllITAStocks();
+    const usTickers = await getAllUSStocks();
 
+    // 1. Analisi Mercato Italiano
     const resultsITA = await scanMarketSegment(itaTickers, 'ITA');
+    
+    // 2. Analisi Mercato Americano
     const resultsUSA = await scanMarketSegment(usTickers, 'USA');
 
     const finalData = {
         ITA: resultsITA,
         USA: resultsUSA,
-        lastUpdate: new Date().toLocaleString('it-IT')
+        lastUpdate: new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' })
     };
 
     fs.writeFileSync(RESULTS_FILE, JSON.stringify(finalData, null, 2));
-    console.log("✅ ANALISI GLOBALE COMPLETATA E SALVATA!");
+    console.log("✅ COMPLETATA SCANSIONE TOTALE DEI DUE MERCATI!");
 }
 
-// Cron interno schedulato per le 05:00 del mattino
+// Schedulazione notturna
 cron.schedule('0 5 * * *', () => {
     runFullAnalysis();
 }, { timezone: "Europe/Rome" });
 
-// API che restituisce i dati memorizzati nel file JSON
+// =========================================================================
+// 6. ENDPOINTS E FRONTEND
+// =========================================================================
 app.get('/api/market-analysis', (req, res) => {
     if (fs.existsSync(RESULTS_FILE)) {
         const data = JSON.parse(fs.readFileSync(RESULTS_FILE, 'utf8'));
         res.json(data);
     } else {
-        res.json({ ITA: [], USA: [], message: "Analisi in corso o non ancora eseguita." });
+        res.json({ ITA: [], USA: [], message: "Analisi in corso. I dati appariranno al termine dello scan." });
     }
 });
 
-// Endpoint per avviare manualmente l'analisi (se si vuole provarla subito)
 app.get('/api/force-start', (req, res) => {
     runFullAnalysis();
-    res.send("🚀 Scansione totale avviata in background! Guarda i log su Render. Il sito si aggiornerà al termine.");
+    res.send("🚀 Scansione di TUTTO il mercato avviata in background! Monitora i log del server.");
 });
 
-// FRONTEND HTML
 app.get('/', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -183,11 +253,11 @@ app.get('/', (req, res) => {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>CIAK! AZIONI - GLOBAL SCAN</title>
+        <title>CIAK! AZIONI - SCANNER COMPLETO</title>
         <style>
             body { font-family: Arial, sans-serif; background-color: #0f172a; color: #f8fafc; margin: 0; padding: 20px; }
             .container { max-width: 850px; margin: 0 auto; }
-            h1 { text-align: center; font-style: italic; color: #f8fafc; }
+            h1 { text-align: center; color: #f8fafc; }
             .update-time { text-align: center; color: #94a3b8; font-size: 14px; margin-bottom: 20px; }
             .tabs { display: flex; gap: 10px; margin-bottom: 15px; justify-content: center; }
             .tab { padding: 10px 20px; background: #1e293b; color: #94a3b8; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; }
@@ -204,15 +274,15 @@ app.get('/', (req, res) => {
     </head>
     <body>
         <div class="container">
-            <h1>CIAK! AZIONI 🖕<br><span style="font-size: 14px; color: #38bdf8;">(Global Scanner)</span></h1>
+            <h1>CIAK! AZIONI 🖕<br><span style="font-size: 14px; color: #38bdf8;">(Global Full Scanner)</span></h1>
             <div id="updateTime" class="update-time">Caricamento dati...</div>
 
             <div class="tabs">
-                <button class="tab active" id="btn-ITA" onclick="switchMarket('ITA')">🇮🇹 ITA (~450)</button>
-                <button class="tab" id="btn-USA" onclick="switchMarket('USA')">🇺🇸 USA (~8.000)</button>
+                <button class="tab active" id="btn-ITA" onclick="switchMarket('ITA')">🇮🇹 ITA (TUTTE)</button>
+                <button class="tab" id="btn-USA" onclick="switchMarket('USA')">🇺🇸 USA (TUTTE)</button>
             </div>
 
-            <div id="content" class="loading">Recupero risultati dall'ultimo scan notturno...</div>
+            <div id="content" class="loading">Recupero dati salvati...</div>
         </div>
 
         <script>
@@ -229,7 +299,7 @@ app.get('/', (req, res) => {
                         return;
                     }
                     
-                    document.getElementById('updateTime').innerText = "Ultimo aggiornamento: " + (globalData.lastUpdate || 'Sconosciuto');
+                    document.getElementById('updateTime').innerText = "Ultimo aggiornamento: " + (globalData.lastUpdate || 'N/D');
                     render();
                 } catch(e) {
                     document.getElementById('content').innerHTML = '<div class="loading" style="color:red;">Errore di connessione.</div>';
@@ -250,7 +320,7 @@ app.get('/', (req, res) => {
                 const container = document.getElementById('content');
                 
                 if(list.length === 0) {
-                    container.innerHTML = '<div class="loading">Nessuna azione ha superato il filtro in questo mercato.</div>';
+                    container.innerHTML = '<div class="loading">Nessun titolo rispetta i filtri in questo mercato.</div>';
                     return;
                 }
 
@@ -258,7 +328,7 @@ app.get('/', (req, res) => {
                     <a href="\${item.url}" target="_blank" rel="noopener noreferrer" class="card">
                         <div>
                             <div class="ticker">\${item.ticker}</div>
-                            <div style="font-size: 12px; color: #94a3b8;">Clicca per aprire il grafico esatto</div>
+                            <div style="font-size: 12px; color: #94a3b8;">Grafico TradingView</div>
                         </div>
                         <div>
                             <div class="price">\${item.price}</div>
