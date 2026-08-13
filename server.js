@@ -10,6 +10,16 @@ const PORT = process.env.PORT || 3000;
 // File dove salveremo i risultati per non doverli ricalcolare a ogni click
 const RESULTS_FILE = './market_results.json';
 
+// =========================================================================
+// 1. ENDPOINT ULTRALEGGERO PER CRON-JOB.ORG
+// Risponde in pochissimi millisecondi per svegliare il server da Render
+// senza generare l'errore "output troppo grande".
+// =========================================================================
+app.get('/api/ping', (req, res) => {
+  console.log('⏰ Ping ricevuto da cron-job.org: Server svegliato!');
+  res.status(200).json({ status: 'ok', message: 'Server attivo!' });
+});
+
 // Funzione per recuperare TUTTE le ~8.000+ azioni USA
 async function getAllUSStocks() {
     try {
@@ -18,7 +28,7 @@ async function getAllUSStocks() {
         const symbols = await response.json();
         return symbols.map(s => {
             const ticker = typeof s === 'string' ? s : (s.symbol || s.ticker);
-            // Filtra ticker strani o warrant
+            // Filtra ticker particolari o warrant
             if (!ticker || ticker.includes('.') || ticker.includes('-') || ticker.length > 5) return null;
             return { ticker: ticker.toUpperCase(), name: ticker.toUpperCase() };
         }).filter(Boolean);
@@ -28,23 +38,19 @@ async function getAllUSStocks() {
     }
 }
 
-// Funzione per generare/recuperare TUTTE le azioni ITA
-// Poiché non c'è un JSON pubblico con tutte le 450+ azioni, qui inseriamo le principali
-// e tu potrai espandere l'array o caricarle da un file CSV in futuro.
+// Funzione per recuperare le azioni ITA
 async function getAllITAStocks() {
-    // Per brevità di codice ti metto un generatore parziale, ma l'architettura supporta infiniti ticker
     const itaTickersBase = [
         'A2A','AMP','ANL','ARIS','AZM','BGN','BMED','BPE','BMPS','BAMI','BZU','CPR','DIA',
         'ENEL','ENI','ERG','EXO','RACE','FNM','G','HER','ISP','IG','LION','MB','MIRC',
         'MONC','NEXI','PRY','REC','SFER','SPM','SRG','STLAM','STMMI','TIT','TEN','TRN','UCG',
         'UNI','IP','MAR','SAMI','TOS','BFF','ACE','ANIM','BRC','FCT','IPG','LUVE','PIRC',
         'IGD','DADA','OVS','TIN','SOL','AVIO','SECM','TYN','REVO','SIT','JUVE','LKT','WEBL'
-        // AGGIUNGI QUI TUTTI GLI ALTRI TICKER CHE VUOI, SENZA IL ".MI"
     ];
     return itaTickersBase.map(t => ({ ticker: `${t}.MI`, name: t }));
 }
 
-// Funzione matematica
+// Funzioni matematiche
 const calculateMean = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
 const calculateMedian = (arr) => {
     const sorted = [...arr].sort((a, b) => a - b);
@@ -53,19 +59,17 @@ const calculateMedian = (arr) => {
 };
 const calculateStdDev = (arr, mean) => Math.sqrt(arr.reduce((sq, val) => sq + Math.pow(val - mean, 2), 0) / arr.length);
 
-// LA FUNZIONE CHIAVE: SCARICA I DATI LENTAMENTE (1 alla volta) PER NON ESSERE BLOCCATI
+// SCANSIONE CONTROLLATA CON PAUSE ANTI-BAN (1 azione alla volta)
 async function scanMarketSegment(tickers, marketName, ruleMonths = 6, ruleStdMonths = 6, ruleStdPct = 3.0) {
     const passedStocks = [];
     const daysMedian = ruleMonths * 21;
     const daysStd = ruleStdMonths * 21;
 
-    console.log(`🚀 Inizio scansione ${marketName}: ${tickers.length} azioni. Questa operazione richiederà tempo...`);
+    console.log(`🚀 Inizio scansione ${marketName}: ${tickers.length} azioni. Richiederà tempo...`);
 
-    // CICLO LENTO E CONTROLLATO - NIENTE BATCH PARALLELI CHE CAUSANO BLOCCHI
     for (let i = 0; i < tickers.length; i++) {
         const item = tickers[i];
         
-        // Log ogni 100 azioni per capire a che punto siamo
         if (i % 100 === 0) console.log(`⏳ [${marketName}] Analizzate ${i}/${tickers.length} azioni...`);
 
         try {
@@ -74,11 +78,11 @@ async function scanMarketSegment(tickers, marketName, ruleMonths = 6, ruleStdMon
                 headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } 
             });
 
-            // Se Yahoo ci blocca (429), mettiamo in pausa il server per 10 secondi e riproviamo
+            // Gestione Rate Limit di Yahoo Finance
             if (response.status === 429) {
-                console.log(`⚠️ Rilevato Rate Limit su ${item.ticker}. Pausa di 10 secondi...`);
+                console.log(`⚠️ Rate Limit su ${item.ticker}. Pausa di 10 secondi...`);
                 await new Promise(r => setTimeout(r, 10000));
-                i--; // Ripete questa azione
+                i--; 
                 continue;
             }
 
@@ -94,19 +98,18 @@ async function scanMarketSegment(tickers, marketName, ruleMonths = 6, ruleStdMon
             const pricesMedian = prices.slice(-daysMedian);
             const meanMed = calculateMean(pricesMedian);
             const medMed = calculateMedian(pricesMedian);
-            if (medMed <= meanMed) continue; // Filtro Mediana
+            if (medMed <= meanMed) continue; 
 
             const pricesStd = prices.slice(-daysStd);
             const meanStd = calculateMean(pricesStd);
             const stdDev = calculateStdDev(pricesStd, meanStd);
-            if (stdDev < (ruleStdPct / 100) * meanStd) continue; // Filtro Deviazione
+            if (stdDev < (ruleStdPct / 100) * meanStd) continue; 
 
             const currentPrice = prices[prices.length - 1];
             const prevClose = prices[prices.length - 2] || currentPrice;
             const dailyChangePct = ((currentPrice - prevClose) / prevClose) * 100;
             const changePeriodPct = ((currentPrice - pricesMedian[0]) / pricesMedian[0]) * 100;
 
-            // Link perfetto al 100% per tutte le 8000 azioni (TradingView usa il ticker standard)
             const exchange = marketName === 'ITA' ? 'MIL' : 'US';
             const cleanTicker = item.ticker.replace('.MI', '');
             const exactLink = `https://www.tradingview.com/chart/?symbol=${exchange}:${cleanTicker}`;
@@ -121,17 +124,17 @@ async function scanMarketSegment(tickers, marketName, ruleMonths = 6, ruleStdMon
             });
 
         } catch (e) {
-            // Ignora gli errori di rete singoli e passa all'azione successiva
+            // Salta silenziosamente errori su singoli ticker
         }
 
-        // IL SEGRETO CONTRO I BLOCCHI: 1.2 secondi di pausa tra ogni azione (Totalmente invisibile a Yahoo)
+        // Pausa di 1.2 secondi per evitare di essere bloccati
         await new Promise(resolve => setTimeout(resolve, 1200)); 
     }
 
     return passedStocks;
 }
 
-// Esecuzione generale che salva su file
+// Esecuzione generale
 async function runFullAnalysis() {
     console.log("=== AVVIO ANALISI GLOBALE DI TUTTI I MERCATI ===");
     
@@ -139,7 +142,7 @@ async function runFullAnalysis() {
     const itaTickers = await getAllITAStocks();
 
     const resultsITA = await scanMarketSegment(itaTickers, 'ITA');
-    const resultsUSA = await scanMarketSegment(usTickers, 'USA'); // Questo impiegherà ~2.5 ore
+    const resultsUSA = await scanMarketSegment(usTickers, 'USA');
 
     const finalData = {
         ITA: resultsITA,
@@ -147,33 +150,32 @@ async function runFullAnalysis() {
         lastUpdate: new Date().toLocaleString('it-IT')
     };
 
-    // Salva i risultati nel file per servirli immediatamente agli utenti
     fs.writeFileSync(RESULTS_FILE, JSON.stringify(finalData, null, 2));
     console.log("✅ ANALISI GLOBALE COMPLETATA E SALVATA!");
 }
 
-// Schedulazione: Lancia il processo pesante ogni notte all'1:00 AM
-cron.schedule('0 1 * * *', () => {
+// Cron interno schedulato per le 05:00 del mattino
+cron.schedule('0 5 * * *', () => {
     runFullAnalysis();
 }, { timezone: "Europe/Rome" });
 
-// API che legge SEMPLICEMENTE IL FILE GIA' PRONTO (Risposta in 1 millisecondo)
+// API che restituisce i dati memorizzati nel file JSON
 app.get('/api/market-analysis', (req, res) => {
     if (fs.existsSync(RESULTS_FILE)) {
         const data = JSON.parse(fs.readFileSync(RESULTS_FILE, 'utf8'));
         res.json(data);
     } else {
-        res.json({ ITA: [], USA: [], message: "Analisi in corso, torna tra qualche ora." });
+        res.json({ ITA: [], USA: [], message: "Analisi in corso o non ancora eseguita." });
     }
 });
 
-// Endpoint segreto per forzare l'avvio (utile la prima volta che avvii il server)
+// Endpoint per avviare manualmente l'analisi (se si vuole provarla subito)
 app.get('/api/force-start', (req, res) => {
-    runFullAnalysis(); // Parte in background
-    res.send("🚀 Scansione totale avviata in background! Guarda i log del server. Il sito si aggiornerà tra qualche ora.");
+    runFullAnalysis();
+    res.send("🚀 Scansione totale avviata in background! Guarda i log su Render. Il sito si aggiornerà al termine.");
 });
 
-// FRONTEND
+// FRONTEND HTML
 app.get('/', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -243,7 +245,6 @@ app.get('/', (req, res) => {
 
             function render() {
                 let list = globalData[currentMarket] || [];
-                // Ordina per performance del periodo (dal migliore al peggiore)
                 list.sort((a, b) => b.changePeriodPct - a.changePeriodPct);
 
                 const container = document.getElementById('content');
@@ -277,5 +278,4 @@ app.get('/', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server avviato sulla porta ${PORT}`);
-  console.log(`Per avviare la PRIMA analisi globale (richiede ore) apri nel browser: http://localhost:${PORT}/api/force-start`);
 });
