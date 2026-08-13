@@ -1,7 +1,7 @@
 {
   "name": "ciak-azioni-backend",
   "version": "1.0.0",
-  "description": "Backend per scansione di massa mercati azionari",
+  "description": "Backend per scansione azioni",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -9,9 +9,10 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.18.2",
-    "node-cron": "^3.0.3"
+    "mongoose": "^8.0.0",
+    "node-cron": "^3.0.2"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=16.0.0"
   }
 }
