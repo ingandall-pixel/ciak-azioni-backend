@@ -8,7 +8,7 @@ app.use(cors());
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
-// Connessione MongoDB con gestione errori visibile nei log
+// Connessione MongoDB
 mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ Connesso a MongoDB Atlas'))
     .catch(err => console.error('❌ Errore di connessione a MongoDB:', err));
@@ -37,7 +37,7 @@ async function fetchWithRetry(url, retries = 3) {
 }
 
 // =========================================================================
-// LOGICA DI SELEZIONE (Invariata)
+// LOGICA DI SELEZIONE
 // =========================================================================
 const calculateMean = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
 const calculateMedian = (arr) => { const s = [...arr].sort((a, b) => a - b); const m = Math.floor(s.length / 2); return s.length % 2 !== 0 ? s[m] : (s[m-1] + s[m]) / 2; };
@@ -81,13 +81,36 @@ async function scanMarketSegment(tickers, marketName, ruleMonths = 6, ruleStdMon
 }
 
 // =========================================================================
-// ESECUZIONE CON PROTEZIONE CONTRO I BLOCCHI
+// FUNZIONI DATI (Inserisci qui la tua lista completa)
+// =========================================================================
+async function getAllITAStocks() {
+    return [
+        { ticker: 'ENEL.MI', name: 'Enel' },
+        { ticker: 'ENI.MI', name: 'Eni' },
+        { ticker: 'ISP.MI', name: 'Intesa Sanpaolo' },
+        { ticker: 'STLAM.MI', name: 'Stellantis' }
+        // Aggiungi qui gli altri titoli...
+    ];
+}
+
+async function getAllUSStocks() {
+    return [
+        { ticker: 'AAPL', name: 'Apple' },
+        { ticker: 'MSFT', name: 'Microsoft' },
+        { ticker: 'TSLA', name: 'Tesla' },
+        { ticker: 'NVDA', name: 'Nvidia' }
+        // Aggiungi qui gli altri titoli...
+    ];
+}
+
+// =========================================================================
+// ESECUZIONE
 // =========================================================================
 async function runFullAnalysis() {
     try {
         const db = await MarketData.findOne({ key: 'global_analysis' });
         if (db?.isScanning) {
-            console.log("⚠️ Una scansione risulta già attiva nel DB.");
+            console.log("⚠️ Una scansione risulta già attiva.");
             return;
         }
 
@@ -105,10 +128,9 @@ async function runFullAnalysis() {
             { ITA: resITA, USA: resUSA, lastUpdate: new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' }), isScanning: false }, 
             { upsert: true }
         );
-        console.log("✅ Scansione completata e salvata su MongoDB!");
+        console.log("✅ Scansione completata!");
     } catch (e) {
-        console.error("❌ Errore critico durante la scansione:", e);
-        // Sblocca il database in caso di errore per evitare blocchi permanenti
+        console.error("❌ Errore critico:", e);
         await MarketData.findOneAndUpdate({ key: 'global_analysis' }, { isScanning: false }, { upsert: true });
     }
 }
@@ -124,22 +146,21 @@ app.get('/api/market-analysis', async (req, res) => {
         if (data && (data.ITA?.length > 0 || data.USA?.length > 0)) {
             res.json({ ITA: data.ITA, USA: data.USA, lastUpdate: data.lastUpdate });
         } else {
-            res.json({ ITA: [], USA: [], message: "Analisi in corso. I dati appariranno al termine dello scan." });
+            res.json({ ITA: [], USA: [], message: "Analisi in corso." });
         }
     } catch (e) {
-        res.status(500).json({ ITA: [], USA: [], message: "Errore di connessione al database." });
+        res.status(500).json({ ITA: [], USA: [], message: "Errore database." });
     }
 });
 
-// Endpoint di emergenza per sbloccare se si pianta
 app.get('/api/unlock', async (req, res) => {
     await MarketData.findOneAndUpdate({ key: 'global_analysis' }, { isScanning: false }, { upsert: true });
-    res.send("🔓 Server sbloccato con successo! Ora puoi andare su /api/force-start per far partire la scansione.");
+    res.send("🔓 Server sbloccato.");
 });
 
 app.get('/api/force-start', (req, res) => {
     runFullAnalysis();
-    res.send("🚀 Scansione avviata in background. Controlla i log di Render per seguire l'avanzamento.");
+    res.send("🚀 Scansione avviata.");
 });
 
 app.listen(PORT, () => console.log(`Server attivo sulla porta ${PORT}`));
