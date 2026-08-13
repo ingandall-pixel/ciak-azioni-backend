@@ -8,19 +8,21 @@ app.use(cors());
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
-// Connessione MongoDB
-mongoose.connect(MONGO_URI).then(() => console.log('✅ Connesso a MongoDB'));
+// Connessione MongoDB con gestione errori visibile nei log
+mongoose.connect(MONGO_URI)
+    .then(() => console.log('✅ Connesso a MongoDB Atlas'))
+    .catch(err => console.error('❌ Errore di connessione a MongoDB:', err));
 
 const MarketData = mongoose.model('MarketData', new mongoose.Schema({
     key: { type: String, unique: true, default: 'global_analysis' },
     ITA: Array,
     USA: Array,
     lastUpdate: String,
-    isScanning: Boolean // Per evitare sovrapposizioni
+    isScanning: Boolean
 }));
 
 // =========================================================================
-// MOTORE ANTI-BLOCCO (Invariato)
+// MOTORE ANTI-BLOCCO
 // =========================================================================
 async function fetchWithRetry(url, retries = 3) {
     for (let i = 0; i < retries; i++) {
@@ -43,7 +45,7 @@ const calculateStdDev = (arr, mean) => Math.sqrt(arr.reduce((sq, val) => sq + Ma
 
 async function scanMarketSegment(tickers, marketName, ruleMonths = 6, ruleStdMonths = 6, ruleStdPct = 3.0) {
     const passed = [];
-    const BATCH_SIZE = 5; // AUMENTATO PER VELOCIZZARE
+    const BATCH_SIZE = 5;
     const daysMed = ruleMonths * 21;
     const daysStd = ruleStdMonths * 21;
 
@@ -62,48 +64,82 @@ async function scanMarketSegment(tickers, marketName, ruleMonths = 6, ruleStdMon
             if (calculateStdDev(pStd, calculateMean(pStd)) < (ruleStdPct / 100) * calculateMean(pStd)) return null;
 
             const cur = prices[prices.length - 1];
-            return { ticker: item.ticker, name: item.name, price: cur.toFixed(2), changePeriodPct: ((cur - pMed[0]) / pMed[0]) * 100, dailyChangePct: ((cur - (prices[prices.length-2] || cur)) / (prices[prices.length-2] || cur)) * 100, url: `https://www.tradingview.com/chart/?symbol=${marketName === 'ITA' ? 'MIL' : 'US'}:${item.ticker.replace('.MI', '')}` };
+            return { 
+                ticker: item.ticker, 
+                name: item.name, 
+                price: `${cur.toFixed(2)} ${marketName === 'ITA' ? '€' : '$'}`, 
+                changePeriodPct: ((cur - pMed[0]) / pMed[0]) * 100, 
+                dailyChangePct: ((cur - (prices[prices.length-2] || cur)) / (prices[prices.length-2] || cur)) * 100, 
+                url: `https://www.tradingview.com/chart/?symbol=${marketName === 'ITA' ? 'MIL' : 'US'}:${item.ticker.replace('.MI', '')}` 
+            };
         });
         const res = await Promise.all(promises);
         res.forEach(r => { if (r) passed.push(r); });
-        await new Promise(r => setTimeout(r, 600)); // Delay ridotto per velocità
+        await new Promise(r => setTimeout(r, 600));
     }
     return passed;
 }
 
 // =========================================================================
-// ESECUZIONE (Ottimizzata)
+// ESECUZIONE CON PROTEZIONE CONTRO I BLOCCHI
 // =========================================================================
 async function runFullAnalysis() {
-    const db = await MarketData.findOne({ key: 'global_analysis' });
-    if (db?.isScanning) return; // Non avviare se già in corso
-
-    await MarketData.findOneAndUpdate({ key: 'global_analysis' }, { isScanning: true }, { upsert: true });
-
     try {
-        // [Inserire qui le tue funzioni getAllITAStocks e getAllUSStocks originali]
+        const db = await MarketData.findOne({ key: 'global_analysis' });
+        if (db?.isScanning) {
+            console.log("⚠️ Una scansione risulta già attiva nel DB.");
+            return;
+        }
+
+        await MarketData.findOneAndUpdate({ key: 'global_analysis' }, { isScanning: true }, { upsert: true });
+
+        console.log("🚀 Inizio scansione mercati...");
         const ita = await getAllITAStocks();
         const us = await getAllUSStocks();
+        
         const resITA = await scanMarketSegment(ita, 'ITA');
         const resUSA = await scanMarketSegment(us, 'USA');
         
-        await MarketData.findOneAndUpdate({ key: 'global_analysis' }, { ITA: resITA, USA: resUSA, lastUpdate: new Date().toLocaleString(), isScanning: false }, { upsert: true });
+        await MarketData.findOneAndUpdate(
+            { key: 'global_analysis' }, 
+            { ITA: resITA, USA: resUSA, lastUpdate: new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome' }), isScanning: false }, 
+            { upsert: true }
+        );
+        console.log("✅ Scansione completata e salvata su MongoDB!");
     } catch (e) {
+        console.error("❌ Errore critico durante la scansione:", e);
+        // Sblocca il database in caso di errore per evitare blocchi permanenti
         await MarketData.findOneAndUpdate({ key: 'global_analysis' }, { isScanning: false }, { upsert: true });
     }
 }
+
+cron.schedule('0 5 * * *', runFullAnalysis, { timezone: "Europe/Rome" });
 
 // =========================================================================
 // ENDPOINTS
 // =========================================================================
 app.get('/api/market-analysis', async (req, res) => {
-    const data = await MarketData.findOne({ key: 'global_analysis' });
-    res.json(data || { ITA: [], USA: [], message: "Analisi in attesa." });
+    try {
+        const data = await MarketData.findOne({ key: 'global_analysis' });
+        if (data && (data.ITA?.length > 0 || data.USA?.length > 0)) {
+            res.json({ ITA: data.ITA, USA: data.USA, lastUpdate: data.lastUpdate });
+        } else {
+            res.json({ ITA: [], USA: [], message: "Analisi in corso. I dati appariranno al termine dello scan." });
+        }
+    } catch (e) {
+        res.status(500).json({ ITA: [], USA: [], message: "Errore di connessione al database." });
+    }
+});
+
+// Endpoint di emergenza per sbloccare se si pianta
+app.get('/api/unlock', async (req, res) => {
+    await MarketData.findOneAndUpdate({ key: 'global_analysis' }, { isScanning: false }, { upsert: true });
+    res.send("🔓 Server sbloccato con successo! Ora puoi andare su /api/force-start per far partire la scansione.");
 });
 
 app.get('/api/force-start', (req, res) => {
     runFullAnalysis();
-    res.send("🚀 Scansione avviata in background.");
+    res.send("🚀 Scansione avviata in background. Controlla i log di Render per seguire l'avanzamento.");
 });
 
-app.listen(PORT);
+app.listen(PORT, () => console.log(`Server attivo sulla porta ${PORT}`));
