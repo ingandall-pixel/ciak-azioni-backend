@@ -7,7 +7,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Rotta Home: Carica l'interfaccia con Mercato Italiano e Americano
+// Rotta Home: Carica l'interfaccia
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -15,22 +15,23 @@ app.get('/', (req, res) => {
 // Endpoint Pulsante "Avvia analisi" (Aggiornamento Manuale)
 app.post('/api/run-analysis', (req, res) => {
     console.log("Analisi manuale avviata...");
-    const pythonProcess = spawn('python', ['update_db.py']);
+    // Usiamo 'python3' invece di 'python' per compatibilità su ambienti Linux/Render
+    const pythonProcess = spawn('python3', ['analyzer.py', 'it', '1y', '0', '0', 'perf', 'desc']);
     
     pythonProcess.on('close', (code) => {
         if (code === 0) {
-            res.json({ success: true, message: "Analisi completata!" });
+            res.json({ success: true, message: "Analisi completata con successo!" });
         } else {
-            res.status(500).json({ success: false, message: "Errore durante l'analisi." });
+            res.status(500).json({ success: false, message: "Errore durante l'esecuzione dello script Python." });
         }
     });
 });
 
-// Endpoint per il filtraggio on-demand (Rotelline iOS + Periodi)
+// Endpoint per il filtraggio on-demand
 app.get('/api/filter-actions', (req, res) => {
     const { market, period, medianMarkup, stdMarkup, sortBy, sortOrder } = req.query;
 
-    const pythonProcess = spawn('python', [
+    const pythonProcess = spawn('python3', [
         'analyzer.py', 
         market || 'it', 
         period || '1y', 
@@ -42,6 +43,7 @@ app.get('/api/filter-actions', (req, res) => {
 
     let dataString = '';
     pythonProcess.stdout.on('data', (data) => { dataString += data.toString(); });
+    
     pythonProcess.on('close', (code) => {
         try {
             res.json(JSON.parse(dataString));
