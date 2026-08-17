@@ -43,16 +43,21 @@ app.post('/api/run-analysis', (req, res) => {
     // In questo modo il browser non rimane in caricamento per minuti, ma fa partire la barra.
     res.json({ success: true, message: "Processo avviato in background." });
 
-    // 4. Cosa succede quando Python finisce il lavoro
+    // 4. Gestione della chiusura del processo Python (Vero completamento o Crash)
     pythonProcess.on('close', (code) => {
         console.log(`Script Python terminato con codice ${code}`);
-        // Forza il 100% alla chiusura per sicurezza
-        fs.writeFileSync('progress.json', JSON.stringify({ percent: 100, status: "Completato!" }));
+        if (code === 0) {
+            // Se finisce con codice 0, significa che è andato tutto perfettamente
+            fs.writeFileSync('progress.json', JSON.stringify({ percent: 100, status: "Completato!" }));
+        } else {
+            // Se finisce con qualsiasi altro codice, è crashato!
+            fs.writeFileSync('progress.json', JSON.stringify({ percent: 100, status: "Errore! Guarda i log di Render" }));
+        }
     });
 
-    // (Opzionale) Registra eventuali errori nel log di Render per facilitare il debug
+    // Registra gli errori di Python direttamente nei log di Render per facilitare il debug
     pythonProcess.stderr.on('data', (data) => {
-        console.error(`Errore Python: ${data.toString()}`);
+        console.error(`ERRORE PYTHON: ${data.toString()}`);
     });
 });
 
