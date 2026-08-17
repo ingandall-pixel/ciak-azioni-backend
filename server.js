@@ -1,59 +1,64 @@
 const express = require('express');
 const { spawn } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 const app = express();
 
+// --- CONFIGURAZIONI BASE ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Rotta Home: Carica l'interfaccia
+// --- ROTTA PRINCIPALE ---
+// Carica l'interfaccia grafica (la tua Home con il titolo "CIAK! - AZIONI 🖕")
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Endpoint Pulsante "Avvia analisi" (Aggiornamento Manuale)
+// --- ROTTA PROGRESSO ---
+// Il frontend chiama questa rotta ogni secondo per far muovere la barra di caricamento
+app.get('/api/progress', (req, res) => {
+    try {
+        // Legge lo stato dal file aggiornato dallo script Python
+        const progressData = fs.readFileSync('progress.json', 'utf8');
+        res.json(JSON.parse(progressData));
+    } catch (err) {
+        // Se il file non esiste ancora, restituisce 0%
+        res.json({ percent: 0, status: "Avvio in corso..." });
+    }
+});
+
+// --- ROTTA AVVIO ANALISI ---
+// Si attiva quando clicchi "Avvia analisi" o quando parte l'automazione notturna
 app.post('/api/run-analysis', (req, res) => {
-    console.log("Analisi manuale avviata...");
-    // Usiamo 'python3' invece di 'python' per compatibilità su ambienti Linux/Render
-    const pythonProcess = spawn('python3', ['analyzer.py', 'it', '1y', '0', '0', 'perf', 'desc']);
+    console.log("Ricevuto comando: Inizio costruzione/aggiornamento Database...");
     
+    // 1. Inizializza/Resetta il file di progresso a 0
+    fs.writeFileSync('progress.json', JSON.stringify({ percent: 0, status: "Inizializzazione script Python..." }));
+    
+    // 2. Lancia lo script di aggiornamento Intelligente (update_db.py)
+    const pythonProcess = spawn('python3', ['update_db.py']);
+    
+    // 3. Risponde SUBITO al frontend. 
+    // In questo modo il browser non rimane in caricamento per minuti, ma fa partire la barra.
+    res.json({ success: true, message: "Processo avviato in background." });
+
+    // 4. Cosa succede quando Python finisce il lavoro
     pythonProcess.on('close', (code) => {
-        if (code === 0) {
-            res.json({ success: true, message: "Analisi completata con successo!" });
-        } else {
-            res.status(500).json({ success: false, message: "Errore durante l'esecuzione dello script Python." });
-        }
+        console.log(`Script Python terminato con codice ${code}`);
+        // Forza il 100% alla chiusura per sicurezza
+        fs.writeFileSync('progress.json', JSON.stringify({ percent: 100, status: "Completato!" }));
+    });
+
+    // (Opzionale) Registra eventuali errori nel log di Render per facilitare il debug
+    pythonProcess.stderr.on('data', (data) => {
+        console.error(`Errore Python: ${data.toString()}`);
     });
 });
 
-// Endpoint per il filtraggio on-demand
-app.get('/api/filter-actions', (req, res) => {
-    const { market, period, medianMarkup, stdMarkup, sortBy, sortOrder } = req.query;
-
-    const pythonProcess = spawn('python3', [
-        'analyzer.py', 
-        market || 'it', 
-        period || '1y', 
-        medianMarkup || 0, 
-        stdMarkup || 0, 
-        sortBy || 'perf', 
-        sortOrder || 'desc'
-    ]);
-
-    let dataString = '';
-    pythonProcess.stdout.on('data', (data) => { dataString += data.toString(); });
-    
-    pythonProcess.on('close', (code) => {
-        try {
-            res.json(JSON.parse(dataString));
-        } catch (e) {
-            res.status(500).json({ error: "Errore nel calcolo dei dati." });
-        }
-    });
-});
-
+// --- AVVIO DEL SERVER ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server attivo su porta ${PORT}`);
+    console.log(`Server attivo e in ascolto sulla porta ${PORT}`);
+    console.log(`Pronto per gestire l'analisi del mercato Italiano e Americano.`);
 });
