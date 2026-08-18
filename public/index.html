@@ -3,83 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ciak Azioni Dashboard</title>
+    <title>Ciak Azioni - Dashboard</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9; }
-        .error-box { 
-            color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; 
-            padding: 15px; margin-bottom: 20px; border-radius: 4px; display: none; 
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 40px;
         }
-        .controls { margin-bottom: 20px; display: flex; gap: 10px; align-items: center; }
-        button { padding: 8px 16px; cursor: pointer; }
-        .container-periodo { margin-top: 20px; margin-bottom: 20px; padding: 20px; border: 1px solid #ddd; background: white; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #212529; color: white; }
+        .container {
+            max-width: 800px;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin: auto;
+        }
+        h2 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .btn-group {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #progress-container {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        progress {
+            width: 100%;
+            height: 22px;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
+    <div class="container">
+        <h2>Ciak Azioni - Pannello di Controllo</h2>
+        
+        <div class="btn-group">
+            <button onclick="startUpdateDb()">Aggiorna Database</button>
+            <button onclick="startAnalyze()">Avvia Analisi</button>
+        </div>
 
-    <div id="errore-box" class="error-box"></div>
+        <div id="progress-container">
+            <p id="status-text">Stato: In attesa</p>
+            <progress id="progress-bar" value="0" max="100"></progress>
+        </div>
 
-    <div class="controls">
-        <button onclick="caricaDati('italiano')">Mercato Italiano</button>
-        <button onclick="caricaDati('americano')">Mercato Americano</button>
+        <h3>Output / Risultati:</h3>
+        <pre id="output">Nessun dato elaborato finora.</pre>
     </div>
-
-    <div class="container-periodo">
-        <label for="periodo"><strong>Periodo:</strong></label>
-        <select id="periodo">
-            <option value="1">1 Anno</option>
-        </select>
-    </div>
-
-    <table id="tabella-azioni">
-        <thead>
-            <tr>
-                <th>Azione</th>
-                <th>Prezzo</th>
-                <th>Var. Periodo (%)</th>
-            </tr>
-        </thead>
-        <tbody id="corpo-tabella">
-            <!-- Dati caricati qui -->
-        </tbody>
-    </table>
 
     <script>
-        async function caricaDati(mercato) {
-            const erroreBox = document.getElementById('errore-box');
-            erroreBox.style.display = 'none';
+        let progressInterval = null;
 
-            try {
-                // Legge dal JSON tramite il server NodeJS
-                const response = await fetch('/market_db.json');
-                
-                if (!response.ok) {
-                    throw new Error(`Errore Server`);
-                }
-                
-                const data = await response.json();
-                popolaTabella(data[mercato] || []);
-                
-            } catch (error) {
-                console.error(error);
-                erroreBox.innerText = "Errore nel caricamento dei dati di mercato: Impossibile caricare market_db.json";
-                erroreBox.style.display = 'block';
-            }
+        function fetchProgress() {
+            fetch('/api/progress')
+                .then(res => res.json())
+                .then(data => {
+                    const percent = data.percent || 0;
+                    const status = data.status || 'Elaborazione in corso...';
+                    
+                    document.getElementById('progress-bar').value = percent;
+                    document.getElementById('status-text').innerText = `Stato: ${status} (${percent}%)`;
+
+                    if (percent >= 100) {
+                        clearInterval(progressInterval);
+                    }
+                })
+                .catch(err => console.error('Errore recupero progresso:', err));
         }
 
-        function popolaTabella(azioni) {
-            const corpo = document.getElementById('corpo-tabella');
-            corpo.innerHTML = '';
-            azioni.forEach(item => {
-                corpo.innerHTML += `<tr>
-                    <td>${item.azione}</td>
-                    <td>${item.prezzo}</td>
-                    <td>${item.var_periodo}</td>
-                </tr>`;
-            });
+        function startUpdateDb() {
+            document.getElementById('output').innerText = 'Aggiornamento del database storico avviato...';
+            document.getElementById('progress-bar').value = 0;
+            
+            progressInterval = setInterval(fetchProgress, 1000);
+
+            fetch('/api/update-db')
+                .then(res => res.json())
+                .then(data => {
+                    clearInterval(progressInterval);
+                    fetchProgress();
+                    document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+                })
+                .catch(err => {
+                    clearInterval(progressInterval);
+                    document.getElementById('output').innerText = 'Errore di connessione: ' + err;
+                });
+        }
+
+        function startAnalyze() {
+            document.getElementById('output').innerText = 'Analisi dei mercati in corso... Attendere.';
+            
+            fetch('/api/analyze')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+                })
+                .catch(err => {
+                    document.getElementById('output').innerText = 'Errore durante l\'analisi: ' + err;
+                });
         }
     </script>
 </body>
