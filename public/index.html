@@ -14,12 +14,10 @@
         .btn-analizza:disabled { background-color: #ccc; cursor: not-allowed; }
         .btn-log { background-color: #dc3545; color: white; border: none; padding: 10px 15px; font-size: 14px; border-radius: 8px; cursor: pointer; text-decoration: none; display: none; font-weight: bold; }
         
-        /* Barra di avanzamento */
         #progress-container { display: none; width: 100%; background: #e9ecef; border-radius: 8px; margin-bottom: 20px; overflow: hidden; height: 25px; position: relative; }
         #progress-bar { height: 100%; width: 0%; background: #28a745; transition: width 0.4s; }
         #progress-text { position: absolute; width: 100%; text-align: center; top: 3px; font-size: 14px; font-weight: bold; color: #333; }
 
-        /* Pop-up che richiedono il click su OK */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
         .modal-box { display: none; position: fixed; top: 30%; left: 50%; transform: translateX(-50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 1000; text-align: center; width: 320px; }
         .modal-box h3 { margin-top: 0; margin-bottom: 10px; }
@@ -35,7 +33,6 @@
         label { font-size: 14px; font-weight: bold; color: #555; }
         select { padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
 
-        /* Rotella a scorrimento per cellulare */
         .wheel-container { display: flex; align-items: center; gap: 5px; background: #fff; border: 1px solid #ccc; border-radius: 6px; padding: 4px 8px; }
         .wheel-input { width: 60px; border: none; font-size: 16px; font-weight: bold; text-align: center; outline: none; background: transparent; }
         .wheel-btns { display: flex; flex-direction: column; }
@@ -49,7 +46,6 @@
 </head>
 <body>
 
-<!-- Overlay e Pop-up di Successo -->
 <div id="modal-overlay" class="modal-overlay"></div>
 <div id="success-popup" class="modal-box">
     <h3 style="color: #28a745;">Operazione Completata!</h3>
@@ -57,7 +53,6 @@
     <button class="modal-btn" style="background: #28a745;" onclick="closeModal()">OK</button>
 </div>
 
-<!-- Pop-up di Errore -->
 <div id="error-popup" class="modal-box">
     <h3 style="color: #dc3545;">Errore Riscontrato</h3>
     <p>Il processo si è interrotto. Scarica il file di log per analizzare il problema.</p>
@@ -139,7 +134,7 @@
             </tr>
         </thead>
         <tbody id="resultsTableBody">
-            <tr><td colspan="6" style="text-align:center;">Database in attesa di elaborazione. Clicca "Avvia analisi".</td></tr>
+            <tr><td colspan="6" style="text-align:center;">Avvia un'analisi o seleziona un filtro per visualizzare i dati.</td></tr>
         </tbody>
     </table>
 </div>
@@ -204,7 +199,7 @@
                             document.getElementById('error-popup').style.display = 'block';
                         } else {
                             document.getElementById('success-popup').style.display = 'block';
-                            loadData();
+                            loadData(); // Ricarica la tabella con i dati freschi
                         }
                     }
                 }).catch(() => {});
@@ -220,10 +215,50 @@
             });
     }
 
+    // La funzione che popola visivamente la tabella interrogando il server
     function loadData() {
+        const period = document.getElementById('periodSelect').value;
+        const median = document.getElementById('medianMarkup').value;
+        const std = document.getElementById('stdMarkup').value;
+        const sortBy = document.getElementById('sortBy').value;
         const tbody = document.getElementById('resultsTableBody');
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Database pronto. (Visualizzazione dati da collegare all'analyzer).</td></tr>`;
+
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Elaborazione dati in corso...</td></tr>`;
+
+        fetch(`/api/data?market=${currentMarket}&period=${period}&medianMarkup=${median}&stdMarkup=${std}&sortBy=${sortBy}&sortOrder=desc`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data || data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Nessun dato disponibile nel database. Clicca "Avvia analisi" per scaricare lo storico.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = '';
+                data.forEach(item => {
+                    const tr = document.createElement('tr');
+                    
+                    // Colora i valori positivi di verde e i negativi di rosso
+                    const perfColor = item.period_change >= 0 ? '#28a745' : '#dc3545';
+                    const dailyColor = item.daily_change >= 0 ? '#28a745' : '#dc3545';
+
+                    tr.innerHTML = `
+                        <td><strong>${item.name}</strong></td>
+                        <td>${item.price.toFixed(2)}</td>
+                        <td style="color: ${perfColor}; font-weight: bold;">${item.period_change.toFixed(2)}%</td>
+                        <td style="color: ${dailyColor};">${item.daily_change.toFixed(2)}%</td>
+                        <td>${item.median_media_ratio.toFixed(2)}%</td>
+                        <td>${item.std_media_ratio.toFixed(2)}%</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(err => {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: #dc3545;">Errore di caricamento. Clicca 'Avvia Analisi' se è il primo avvio.</td></tr>`;
+            });
     }
+
+    // Carica i dati all'apertura della pagina se il database esiste già
+    document.addEventListener('DOMContentLoaded', loadData);
 </script>
 </body>
 </html>
