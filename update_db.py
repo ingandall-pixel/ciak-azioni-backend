@@ -1,26 +1,25 @@
-import sys
-import os
-
-# Silenziamento di basso livello (OS descriptor) prima di importare yfinance
-sys.stderr.flush()
-devnull = open(os.devnull, 'w')
-os.dup2(devnull.fileno(), sys.stderr.fileno())
-
 import json
+import os
 import time
-import logging
-import warnings
 import urllib.request
 from datetime import datetime
-import pandas as pd
-import yfinance as yf
-
-logging.getLogger('yfinance').setLevel(logging.CRITICAL)
-warnings.filterwarnings('ignore')
 
 DB_FILE = 'market_db.json'
 PROGRESS_FILE = 'progress.json'
-BATCH_SIZE = 10  # Blocchi piccolissimi per evitare blocchi IP
+
+# Elenco completo dei titoli target
+TICKERS_IT = [
+    'A2A.MI', 'AMP.MI', 'AZM.MI', 'BAMI.MI', 'BGN.MI', 'BMED.MI', 'BPE.MI', 
+    'CPR.MI', 'DIA.MI', 'ENEL.MI', 'ENI.MI', 'ERG.MI', 'FBK.MI', 'G.MI', 
+    'INW.MI', 'ISP.MI', 'JUVE.MI', 'LDO.MI', 'MB.MI', 'MONC.MI', 'NEXI.MI', 
+    'PRY.MI', 'PST.MI', 'RACE.MI', 'REC.MI', 'SPM.MI', 'SRG.MI', 'STM.MI', 
+    'TEN.MI', 'TIT.MI', 'TRN.MI', 'UCG.MI', 'UNI.MI'
+]
+
+TICKERS_US = [
+    'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK-B', 
+    'JNJ', 'V', 'JPM', 'WMT', 'AMD', 'NFLX', 'DIS', 'BAC', 'PFE', 'KO'
+]
 
 def update_progress(percent, status, extra_data=None):
     data = {"percent": percent, "status": status}
@@ -29,126 +28,65 @@ def update_progress(percent, status, extra_data=None):
     with open(PROGRESS_FILE, 'w') as f:
         json.dump(data, f)
 
-def clean_ticker(symbol):
-    if not symbol:
-        return ""
-    return str(symbol).replace('$', '').strip()
-
-def get_all_tickers():
-    update_progress(2, "Caricamento elenchi S&P 500 ed Italia...")
-    tickers_us = []
+def fetch_yahoo_chart(ticker, range_period="5y"):
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?range={range_period}&interval=1d"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    }
+    req = urllib.request.Request(url, headers=headers)
     try:
-        url_sp500 = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
-        req = urllib.request.Request(
-            url_sp500,
-            headers={'User-Agent': 'Mozilla/5.0'}
-        )
-        with urllib.request.urlopen(req) as response:
-            html = response.read().decode('utf-8')
-            sp500_df = pd.read_html(html)[0]
-            tickers_us = [clean_ticker(t).replace('.', '-') for t in sp500_df['Symbol'].tolist()]
+        with urllib.request.urlopen(req, timeout=10) as response:
+            res_data = json.loads(response.read().decode('utf-8'))
+            result = res_data['chart']['result'][0]
+            timestamps = result.get('timestamp', [])
+            closes = result['indicators']['quote'][0].get('close', [])
+            
+            price_dict = {}
+            for ts, close in zip(timestamps, closes):
+                if close is not None:
+                    date_str = datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
+                    price_dict[date_str] = round(close, 2)
+            return price_dict
     except Exception:
-        tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK-B', 'JNJ', 'V']
-
-    tickers_it_raw = [
-        'A2A.MI', 'ACE.MI', 'AMP.MI', 'ANIM.MI', 'ARN.MI', 'AZM.MI', 'BAMI.MI', 
-        'BFF.MI', 'BGN.MI', 'BMED.MI', 'BPE.MI', 'BRE.MI', 'BZU.MI', 'CPR.MI', 'DIA.MI', 
-        'ELN.MI', 'ENEL.MI', 'ENI.MI', 'ERG.MI', 'EUC.MI', 'FBK.MI', 'FCT.MI', 'G.MI', 
-        'GHC.MI', 'IGD.MI', 'INW.MI', 'IP.MI', 'ISP.MI', 'IVG.MI', 'JUVE.MI', 'LDO.MI', 
-        'LUVE.MI', 'MB.MI', 'MFEA.MI', 'MFEB.MI', 'MONC.MI', 'NEXI.MI', 'PIA.MI', 'PIR.MI', 
-        'PRY.MI', 'PST.MI', 'RACE.MI', 'REC.MI', 'RWAY.MI', 'SAF.MI', 'SFL.MI', 'SL.MI', 
-        'SPM.MI', 'SRG.MI', 'STM.MI', 'TEN.MI', 'TIT.MI', 'TRN.MI', 'TXT.MI', 'UCG.MI', 
-        'UNI.MI', 'VTY.MI', 'WBA.MI'
-    ]
-    tickers_it = [clean_ticker(t) for t in tickers_it_raw if clean_ticker(t)]
-    return list(dict.fromkeys(tickers_it + tickers_us))
-
-def download_batch_with_retry(batch, period, max_retries=3):
-    """Scarica un blocco gestendo i riprodi automatici in caso di Rate Limit."""
-    for attempt in range(max_retries):
-        try:
-            df = yf.download(
-                tickers=batch,
-                period=period,
-                group_by='ticker',
-                auto_adjust=True,
-                progress=False,
-                threads=False
-            )
-            if df is not None and not df.empty:
-                return df
-        except Exception:
-            pass
-        # Attesa incrementale se viene rilevato un blocco IP
-        time.sleep(6 * (attempt + 1))
-    return None
+        return None
 
 def download_data():
     db_exists = os.path.exists(DB_FILE)
     market_data = {}
 
     if db_exists:
-        update_progress(5, "Database trovato. Aggiornamento incrementale...")
         try:
             with open(DB_FILE, 'r') as f:
                 market_data = json.load(f)
         except Exception:
             market_data = {}
-        period_to_fetch = "5d"
+        range_period = "5d"
+        update_progress(5, "Aggiornamento incrementale...")
     else:
-        update_progress(5, "Database assente. Scaricamento completo...")
-        period_to_fetch = "5y"
+        range_period = "5y"  # Copre perfettamente 1D, 1W, 1M, 1Y e 5Y
+        update_progress(5, "Scaricamento storico (5 Anni)...")
 
-    ALL_TICKERS = get_all_tickers()
-    total_tickers = len(ALL_TICKERS)
-    ticker_batches = [ALL_TICKERS[i:i + BATCH_SIZE] for i in range(0, total_tickers, BATCH_SIZE)]
-    total_batches = len(ticker_batches)
+    all_tickers = TICKERS_IT + TICKERS_US
+    total = len(all_tickers)
 
-    for b_idx, batch in enumerate(ticker_batches):
-        processed_count = min((b_idx + 1) * BATCH_SIZE, total_tickers)
-        percent = int((processed_count / total_tickers) * 90) + 5
-        update_progress(percent, f"Scaricamento blocco ({b_idx + 1}/{total_batches}) - {processed_count}/{total_tickers} titoli...")
+    for idx, ticker in enumerate(all_tickers):
+        percent = int(((idx + 1) / total) * 90) + 5
+        update_progress(percent, f"Scaricamento {ticker} ({idx+1}/{total})...")
+        
+        prices = fetch_yahoo_chart(ticker, range_period)
+        if prices:
+            if ticker in market_data and db_exists:
+                market_data[ticker].update(prices)
+            else:
+                market_data[ticker] = prices
+                
+            with open(DB_FILE, 'w') as f:
+                json.dump(market_data, f)
+        
+        time.sleep(0.2)
 
-        df_batch = download_batch_with_retry(batch, period_to_fetch)
-        if df_batch is None:
-            continue
-
-        for ticker in batch:
-            clean_sym = clean_ticker(ticker)
-            try:
-                if len(batch) == 1:
-                    series = df_batch['Close'] if 'Close' in df_batch else None
-                else:
-                    series = df_batch[clean_sym]['Close'] if clean_sym in df_batch and 'Close' in df_batch[clean_sym] else None
-
-                if series is None or series.dropna().empty:
-                    continue
-
-                series = series.dropna()
-                series.index = series.index.strftime('%Y-%m-%d')
-                new_data = series.to_dict()
-
-                if db_exists and clean_sym in market_data:
-                    old_data = market_data[clean_sym]
-                    if len(old_data) > 0 and period_to_fetch == "5d":
-                        last_date = list(old_data.keys())[-1]
-                        if last_date in old_data:
-                            del old_data[last_date]
-                    old_data.update(new_data)
-                    market_data[clean_sym] = old_data
-                else:
-                    market_data[clean_sym] = new_data
-            except Exception:
-                continue
-
-        with open(DB_FILE, 'w') as f:
-            json.dump(market_data, f)
-
-        time.sleep(2.0)
-
-    # Statistiche
-    it_count = sum(1 for sym in market_data if sym.endswith('.MI'))
-    us_count = len(market_data) - it_count
+    it_count = sum(1 for t in market_data if t in TICKERS_IT)
+    us_count = sum(1 for t in market_data if t in TICKERS_US)
 
     update_progress(100, "Completato!", {
         "it_count": it_count,
