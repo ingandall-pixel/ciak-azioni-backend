@@ -8,7 +8,7 @@ import urllib.request
 import yfinance as yf
 from datetime import datetime
 
-# Soppressione totale dei log rumorosi e degli errori di sistema
+# Soppressione totale dei log di errore superflui
 sys.stderr.flush()
 devnull = open(os.devnull, 'w')
 os.dup2(devnull.fileno(), sys.stderr.fileno())
@@ -19,7 +19,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = os.path.join(BASE_DIR, 'market_db.json')
 PROGRESS_FILE = os.path.join(BASE_DIR, 'progress.json')
 
-# Batch ridotto a 5 per prevenire blocchi e Rate Limit di Yahoo Finance
+# Batch ottimizzato a 5 per evitare i blocchi di Rate Limit pur mantenendo tutte le azioni
 BATCH_SIZE = 5
 
 def update_progress(percent, status, extra_data=None):
@@ -40,7 +40,7 @@ def clean_ticker(symbol):
 def get_all_tickers():
     update_progress(2, "Caricamento registro completo delle azioni USA (SEC) e Italia...")
     
-    # 1. Azioni USA dalla SEC
+    # 1. Azioni USA dalla SEC (numero di azioni invariato)
     tickers_us = []
     try:
         url_sec = 'https://www.sec.gov/files/company_tickers.json'
@@ -54,7 +54,7 @@ def get_all_tickers():
     except Exception:
         tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA']
 
-    # 2. Azioni Italia (da file tickers_it.txt o fallback)
+    # 2. Azioni Italia
     tickers_it = []
     it_file_path = os.path.join(BASE_DIR, 'tickers_it.txt')
     if os.path.exists(it_file_path):
@@ -128,25 +128,26 @@ def download_data():
                 retries -= 1
                 err_msg = str(e)
                 if "Too Many Requests" in err_msg or "Rate limited" in err_msg:
-                    time.sleep(15.0)  # Pausa di sicurezza in caso di blocco IP
+                    time.sleep(20.0)  # Pausa lunga se Yahoo blocca temporaneamente l'IP
                 else:
-                    time.sleep(2.0)
+                    time.sleep(3.0)
 
-        time.sleep(1.0) # Pausa di cortesia tra i batch
+        time.sleep(1.2) # Pausa regolare tra un batch e l'altro per rispetto delle API
 
-    # Calcolo sicuro delle metriche finali
+    # Definizione rigorosa delle variabili per evitare qualsiasi NameError finale
     it_count = sum(1 for sym in market_data if sym.endswith('.MI'))
     us_count = len(market_data) - it_count
     it_avg_years = 2.0
     us_avg_years = 2.0
 
-    # Salvataggio finale del database completo
+    # Scrittura sicura su file del database
     try:
         with open(DB_FILE, 'w', encoding='utf-8') as f:
             json.dump(market_data, f, indent=2)
     except Exception:
         pass
 
+    # Completamento ufficiale al 100%
     update_progress(100, "Completato!", {
         "it_count": it_count,
         "it_avg_years": it_avg_years,
