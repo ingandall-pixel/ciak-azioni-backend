@@ -3,152 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CIAK! - AZIONI 🖕</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        h1 { color: #1a1a1a; display: flex; align-items: center; gap: 10px; }
-        .header-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .btn-analizza { background-color: #007aff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
-        .btn-analizza:hover { background-color: #0056b3; }
-        .btn-analizza:disabled { background-color: #ccc; cursor: not-allowed; }
-        
-        /* Stili Barra di Avanzamento */
-        #progress-container { display: none; width: 100%; background: #e9ecef; border-radius: 8px; margin-bottom: 20px; overflow: hidden; height: 25px; position: relative; }
-        #progress-bar { height: 100%; width: 0%; background: #28a745; transition: width 0.5s; }
-        #progress-text { position: absolute; width: 100%; text-align: center; top: 3px; font-size: 14px; font-weight: bold; color: #333; }
-        
-        .market-sections { display: flex; gap: 20px; margin-bottom: 20px; }
-        .market-btn { padding: 10px 20px; border: 2px solid #007aff; background: transparent; color: #007aff; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .market-btn.active { background: #007aff; color: white; }
-        .controls-panel { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
-        .control-group { display: flex; flex-direction: column; gap: 5px; }
-        label { font-size: 14px; font-weight: bold; color: #555; }
-        select, input[type="range"] { padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-        th { background-color: #f1f3f5; font-weight: 600; }
-        .green { color: #28a745; font-weight: bold; }
-        .red { color: #dc3545; font-weight: bold; }
-    </style>
+    <title>Ciak Azioni Dashboard</title>
+    <!-- Bootstrap CSS per una grafica pulita e responsive -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
+<body class="bg-light">
 
-<div class="container">
-    <div class="header-actions">
-        <h1>CIAK! - AZIONI 🖕</h1>
-        <button id="btn-avvia" class="btn-analizza" onclick="triggerManualAnalysis()">Avvia analisi</button>
+    <div class="container py-4">
+        <!-- Header / Stato -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div id="status-box" class="alert alert-secondary" role="status">
+                    Caricamento dati di mercato in corso...
+                </div>
+            </div>
+        </div>
+
+        <!-- Selettori Mercato -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <button id="btn-it" class="btn btn-primary me-2">Mercato Italiano</button>
+                <button id="btn-us" class="btn btn-outline-primary">Mercato Americano</button>
+            </div>
+        </div>
+
+        <!-- Controlli: Periodo e Sliders -->
+        <div class="card shadow-sm p-3 mb-4">
+            <div class="row align-items-center">
+                <!-- Selettore Periodo Completo -->
+                <div class="col-md-4 mb-3 mb-md-0">
+                    <label for="select-periodo" class="form-label fw-bold">Periodo:</label>
+                    <select id="select-periodo" class="form-select">
+                        <option value="1d">1 Giorno</option>
+                        <option value="1w">1 Settimana</option>
+                        <option value="1m">1 Mese</option>
+                        <option value="1y" selected>1 Anno</option>
+                        <option value="5y">5 Anni</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabella Risultati -->
+        <div class="card shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Azione</th>
+                            <th>Prezzo</th>
+                            <th>Var. Periodo (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <!-- I dati verranno inseriti qui dinamicamente via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
-    <!-- Barra di avanzamento -->
-    <div id="progress-container">
-        <div id="progress-bar"></div>
-        <div id="progress-text">Inizializzazione... 0%</div>
-    </div>
+    <!-- Script JavaScript Completo -->
+    <script>
+        // Mappatura dei giorni di borsa (sessioni) per ciascun periodo selezionato
+        const periodiOffset = {
+            '1d': 1,
+            '1w': 5,
+            '1m': 21,
+            '1y': 252,
+            '5y': 1300
+        };
 
-    <div class="market-sections">
-        <button id="btn-it" class="market-btn active" onclick="switchMarket('it')">Mercato Italiano</button>
-        <button id="btn-us" class="market-btn" onclick="switchMarket('us')">Mercato Americano</button>
-    </div>
+        let globalMarketData = {};
+        let currentMarket = 'IT'; // 'IT' o 'US'
 
-    <div class="controls-panel">
-        <div class="control-group">
-            <label>Periodo:</label>
-            <select id="periodSelect" onchange="loadData()">
-                <option value="1y" selected>1 Anno</option>
-                <option value="5y">5 Anni</option>
-            </select>
-        </div>
-        <div class="control-group">
-            <label>Markup Mediana (%) <span id="valMedian">0</span>%</label>
-            <input type="range" id="medianMarkup" min="0" max="100" value="0" oninput="updateLabel('medianMarkup', 'valMedian'); loadData();">
-        </div>
-        <div class="control-group">
-            <label>Markup Dev.Std (%) <span id="valStd">0</span>%</label>
-            <input type="range" id="stdMarkup" min="0" max="1000" value="0" oninput="updateLabel('stdMarkup', 'valStd'); loadData();">
-        </div>
-        <div class="control-group">
-            <label>Ordina per:</label>
-            <select id="sortBy" onchange="loadData()">
-                <option value="perf">Performance Periodo</option>
-                <option value="median">Rapporto Mediana/Media</option>
-                <option value="std">Rapporto Dev.Std/Media</option>
-            </select>
-        </div>
-    </div>
+        // Funzione per calcolare la variazione percentuale in base al periodo scelto
+        function calcolaVariazione(storicoPrezzi, periodoSelezionato) {
+            const dateKeys = Object.keys(storicoPrezzi).sort();
+            if (dateKeys.length < 2) return 0;
 
-    <table>
-        <thead>
-            <tr>
-                <th>Azione</th>
-                <th>Prezzo</th>
-                <th>Var. Periodo</th>
-                <th>Var. Oggi</th>
-                <th>Mediana/Media</th>
-                <th>DevStd/Media</th>
-            </tr>
-        </thead>
-        <tbody id="resultsTableBody">
-            <!-- I dati reali dal DB andranno qui -->
-        </tbody>
-    </table>
-</div>
+            const offset = periodiOffset[periodoSelezionato] || 252;
+            const indiceFinale = dateKeys.length - 1;
+            const indiceIniziale = Math.max(0, indiceFinale - offset);
 
-<script>
-    let currentMarket = 'it';
-    let progressInterval;
+            const prezzoInizio = storicoPrezzi[dateKeys[indiceIniziale]];
+            const prezzoFine = storicoPrezzi[dateKeys[indiceFinale]];
 
-    function switchMarket(market) {
-        currentMarket = market;
-        document.getElementById('btn-it').classList.toggle('active', market === 'it');
-        document.getElementById('btn-us').classList.toggle('active', market === 'us');
-        loadData();
-    }
+            if (!prezzoInizio || prezzoInizio === 0) return 0;
+            return ((prezzoFine - prezzoInizio) / prezzoInizio) * 100;
+        }
 
-    function updateLabel(sliderId, labelId) {
-        document.getElementById(labelId).innerText = document.getElementById(sliderId).value;
-    }
+        // Funzione per aggiornare la tabella in-page
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
 
-    function monitorProgress() {
-        document.getElementById('progress-container').style.display = 'block';
-        document.getElementById('btn-avvia').disabled = true;
+            const periodoScelto = document.getElementById('select-periodo').value;
 
-        progressInterval = setInterval(() => {
-            fetch('/api/progress')
-                .then(res => res.json())
-                .then(data => {
-                    const percent = data.percent || 0;
-                    const status = data.status || "Attendere...";
-                    document.getElementById('progress-bar').style.width = percent + '%';
-                    document.getElementById('progress-text').innerText = `${status} - ${percent}%`;
+            for (const [ticker, storico] of Object.entries(globalMarketData)) {
+                // Filtra in base al mercato selezionato
+                const isIt = ticker.endswith('.MI') || ticker.endswith('.AS') || !ticker.match(/^[A-Z\-]+$/);
+                if (currentMarket === 'IT' && !isIt) continue;
+                if (currentMarket === 'US' && isIt) continue;
 
-                    if (percent >= 100) {
-                        clearInterval(progressInterval);
-                        setTimeout(() => {
-                            document.getElementById('progress-container').style.display = 'none';
-                            document.getElementById('btn-avvia').disabled = false;
-                            loadData(); // Ricarica la tabella col nuovo DB
-                            alert("Analisi e aggiornamento database completati!");
-                        }, 1000);
-                    }
-                }).catch(() => {});
-        }, 1500);
-    }
+                const dateKeys = Object.keys(storico).sort();
+                if (dateKeys.length === 0) continue;
 
-    function triggerManualAnalysis() {
-        if(!confirm("Vuoi avviare l'aggiornamento del database? (Ci vorrà tempo se è la prima volta)")) return;
-        
-        fetch('/api/run-analysis', { method: 'POST' })
-            .then(res => {
-                if(res.ok) monitorProgress();
-            });
-    }
+                const ultimoPrezzo = storico[dateKeys[dateKeys.length - 1]];
+                const varPct = calcolaVariazione(storico, periodoScelto);
 
-    function loadData() {
-        // Questa funzione ora leggerà direttamente dal DB generato, ma per ora teniamo l'interfaccia reattiva
-        const tbody = document.getElementById('resultsTableBody');
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">Dati dal database pronti per la lettura. (Da integrare in analyzer.py)</td></tr>`;
-    }
-</script>
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="fw-bold">${ticker}</td>
+                    <td>${ultimoPrezzo.toFixed(2)}</td>
+                    <td class="${varPct >= 0 ? 'text-success' : 'text-danger'} fw-bold">
+                        ${varPct >= 0 ? '+' : ''}${varPct.toFixed(2)}%
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        // Event Listeners per i pulsanti di mercato
+        document.getElementById('btn-it').addEventListener('click', () => {
+            currentMarket = 'IT';
+            document.getElementById('btn-it').className = 'btn btn-primary me-2';
+            document.getElementById('btn-us').className = 'btn btn-outline-primary';
+            renderTable();
+        });
+
+        document.getElementById('btn-us').addEventListener('click', () => {
+            currentMarket = 'US';
+            document.getElementById('btn-us').className = 'btn btn-primary me-2';
+            document.getElementById('btn-it').className = 'btn btn-outline-primary';
+            renderTable();
+        });
+
+        // Event Listener per il cambio del periodo nel menu a tendina
+        document.getElementById('select-periodo').addEventListener('change', () => {
+            renderTable();
+        });
+
+        // Caricamento iniziale dei dati dal file JSON del database
+        async function init() {
+            try {
+                const response = await fetch('market_db.json');
+                if (!response.ok) throw new Error("Impossibile caricare market_db.json");
+                globalMarketData = await response.json();
+                
+                document.getElementById('status-box').className = 'alert alert-success';
+                document.getElementById('status-box').innerText = 'Archivio caricato con successo!';
+                
+                renderTable();
+            } catch (error) {
+                document.getElementById('status-box').className = 'alert alert-danger';
+                document.getElementById('status-box').innerText = 'Errore nel caricamento dei dati di mercato.';
+            }
+        }
+
+        // Avvio script al caricamento della pagina
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
 </body>
 </html>
