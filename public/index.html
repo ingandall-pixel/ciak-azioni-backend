@@ -3,131 +3,170 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ciak Azioni - Dashboard</title>
+    <title>CIAK! - AZIONI</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
+            background-color: #ffffff;
             color: #333;
             margin: 0;
-            padding: 40px;
+            padding: 20px;
         }
         .container {
-            max-width: 800px;
-            background: #ffffff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 1200px;
             margin: auto;
         }
-        h2 {
-            margin-top: 0;
-            color: #2c3e50;
-        }
-        .btn-group {
+        .nav-buttons {
             margin-bottom: 20px;
         }
-        button {
-            padding: 10px 20px;
-            margin-right: 10px;
-            background-color: #007bff;
-            color: white;
-            border: none;
+        .nav-buttons button {
+            padding: 8px 16px;
+            margin-right: 5px;
+            background-color: #f8f9fa;
+            border: 1px solid #ccc;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
+            font-weight: bold;
         }
-        button:hover {
-            background-color: #0056b3;
+        .nav-buttons button.active {
+            background-color: #e2e6ea;
+            border-color: #adb5bd;
         }
-        #progress-container {
-            margin-top: 20px;
+        .controls {
             margin-bottom: 20px;
+            font-size: 14px;
+            font-weight: bold;
         }
-        progress {
-            width: 100%;
-            height: 22px;
-        }
-        pre {
-            background: #f8f9fa;
-            padding: 15px;
+        select {
+            padding: 4px 8px;
             border-radius: 4px;
-            border: 1px solid #dee2e6;
-            max-height: 400px;
-            overflow-y: auto;
-            font-size: 13px;
+            border: 1px solid #ccc;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        th {
+            background-color: #212529;
+            color: white;
+        }
+        tr:hover {
+            background-color: #f1f3f5;
+        }
+        .positive {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .negative {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Ciak Azioni - Pannello di Controllo</h2>
-        
-        <div class="btn-group">
-            <button onclick="startUpdateDb()">Aggiorna Database</button>
-            <button onclick="startAnalyze()">Avvia Analisi</button>
+        <!-- Pulsanti Mercati -->
+        <div class="nav-buttons">
+            <button id="btn-it" class="active" onclick="switchMarket('IT')">Mercato Italiano</button>
+            <button id="btn-us" onclick="switchMarket('US')">Mercato Americano</button>
         </div>
 
-        <div id="progress-container">
-            <p id="status-text">Stato: In attesa</p>
-            <progress id="progress-bar" value="0" max="100"></progress>
+        <!-- Selettore Periodo -->
+        <div class="controls">
+            <label for="period-select">Periodo: </label>
+            <select id="period-select" onchange="renderTable()">
+                <option value="1">1 Anno</option>
+                <option value="0.5">6 Mesi</option>
+                <option value="0.25">3 Mesi</option>
+                <option value="all">Massimo</option>
+            </select>
         </div>
 
-        <h3>Output / Risultati:</h3>
-        <pre id="output">Nessun dato elaborato finora.</pre>
+        <!-- Tabella Azioni -->
+        <table>
+            <thead>
+                <tr>
+                    <th>Azione</th>
+                    <th>Prezzo</th>
+                    <th>Var. Periodo (%)</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <tr>
+                    <td colspan="3" class="loading">Caricamento dati in corso...</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 
     <script>
-        let progressInterval = null;
+        let allData = [];
+        let currentMarket = 'IT';
 
-        function fetchProgress() {
-            fetch('/api/progress')
-                .then(res => res.json())
-                .then(data => {
-                    const percent = data.percent || 0;
-                    const status = data.status || 'Elaborazione in corso...';
-                    
-                    document.getElementById('progress-bar').value = percent;
-                    document.getElementById('status-text').innerText = `Stato: ${status} (${percent}%)`;
-
-                    if (percent >= 100) {
-                        clearInterval(progressInterval);
-                    }
-                })
-                .catch(err => console.error('Errore recupero progresso:', err));
-        }
-
-        function startUpdateDb() {
-            document.getElementById('output').innerText = 'Aggiornamento del database storico avviato...';
-            document.getElementById('progress-bar').value = 0;
-            
-            progressInterval = setInterval(fetchProgress, 1000);
-
-            fetch('/api/update-db')
-                .then(res => res.json())
-                .then(data => {
-                    clearInterval(progressInterval);
-                    fetchProgress();
-                    document.getElementById('output').innerText = JSON.stringify(data, null, 2);
-                })
-                .catch(err => {
-                    clearInterval(progressInterval);
-                    document.getElementById('output').innerText = 'Errore di connessione: ' + err;
-                });
-        }
-
-        function startAnalyze() {
-            document.getElementById('output').innerText = 'Analisi dei mercati in corso... Attendere.';
-            
+        function loadData() {
             fetch('/api/analyze')
                 .then(res => res.json())
-                .then(data => {
-                    document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+                .then(response => {
+                    if (response.success && Array.isArray(response.data)) {
+                        allData = response.data;
+                    } else if (Array.isArray(response)) {
+                        allData = response;
+                    }
+                    renderTable();
                 })
                 .catch(err => {
-                    document.getElementById('output').innerText = 'Errore durante l\'analisi: ' + err;
+                    console.error('Errore nel recupero dati:', err);
+                    document.getElementById('table-body').innerHTML = `<tr><td colspan="3" style="color:red; text-align:center;">Errore di caricamento dal server. Il database potrebbe essere vuoto.</td></tr>`;
                 });
         }
+
+        function switchMarket(market) {
+            currentMarket = market;
+            document.getElementById('btn-it').classList.toggle('active', market === 'IT');
+            document.getElementById('btn-us').classList.toggle('active', market === 'US');
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+
+            // Filtra per mercato corrente (IT o US)
+            const filtered = allData.filter(item => item.market === currentMarket);
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="loading">Nessun dato disponibile per questo mercato. Esegui l'aggiornamento del database.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(item => {
+                const tr = document.createElement('tr');
+                
+                const varClass = item.total_return_pct >= 0 ? 'positive' : 'negative';
+                const sign = item.total_return_pct >= 0 ? '+' : '';
+
+                tr.innerHTML = `
+                    <td>${item.ticker}</td>
+                    <td>${item.current_price.toFixed(2)} € / $</td>
+                    <td class="${varClass}">${sign}${item.total_return_pct}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Avvia il caricamento all'avvio della pagina
+        loadData();
     </script>
 </body>
 </html>
