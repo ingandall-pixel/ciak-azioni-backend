@@ -2,242 +2,245 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analisi di Mercato Finanziario</title>
+    <title>CIAK!-AZIONI</title>
     <style>
-        :root {
-            --primary-color: #2563eb;
-            --primary-hover: #1d4ed8;
-            --success-color: #10b981;
-            --info-color: #3b82f6;
-            --bg-color: #f8fafc;
-            --card-bg: #ffffff;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
-        }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h2 { border-left: 5px solid #007bff; padding-left: 10px; color: #333; }
+        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 10px; }
+        select, input, button { padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #007bff; color: white; cursor: pointer; border: none; font-weight: bold; }
+        button:hover:not(:disabled) { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; opacity: 0.65; }
+        .legend { font-size: 12px; color: #666; margin-bottom: 20px; font-style: italic; }
+        .loading { display: none; color: #007bff; font-weight: bold; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #343a40; color: white; padding: 12px; }
+        td { padding: 10px; border-bottom: 1px solid #ddd; text-align: center; }
 
-        body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 40px 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 600px;
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-
-        h1 {
-            font-size: 24px;
-            margin-top: 0;
-            margin-bottom: 24px;
-            text-align: center;
-            color: var(--text-main);
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 15px;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-        }
-
-        button {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 15px;
-            font-weight: 600;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        button:hover:not(:disabled) {
-            background-color: var(--primary-hover);
-            transform: translateY(-1px);
-        }
-
-        button:active:not(:disabled) {
-            transform: translateY(0);
-        }
-
-        button:disabled {
-            background-color: var(--text-muted);
-            cursor: not-allowed;
-            opacity: 0.7;
-            box-shadow: none;
-        }
-
-        .progress-wrapper {
+        /* Stili per le barre di avanzamento */
+        .progress-container {
             display: none;
-            margin-top: 20px;
-            background: #f1f5f9;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
+            margin-top: 15px;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
         }
-
-        .progress-wrapper p {
-            margin: 0 0 8px 0;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--text-main);
-        }
-
         .progress-bar-bg {
             width: 100%;
-            background-color: #e2e8f0;
-            border-radius: 6px;
+            background-color: #e9ecef;
+            border-radius: 4px;
             overflow: hidden;
-            height: 14px;
+            height: 18px;
+            margin-top: 6px;
         }
-
         .progress-bar-fill {
             width: 0%;
             height: 100%;
+            background-color: #28a745;
             transition: width 0.3s ease;
-            border-radius: 6px;
         }
-
-        #progress-bar-analysis {
-            background-color: var(--success-color);
-        }
-
-        #progress-bar-results {
-            background-color: var(--info-color);
+        #progress-bar-results-fill {
+            background-color: #007bff;
         }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Dashboard Analisi di Mercato</h1>
+<div class="container">
+    <h2>CIAK!-AZIONI</h2>
 
-        <!-- Pulsanti di azione -->
-        <div class="button-group">
-            <button id="btn-analysis" onclick="startAnalysis()">Avvia analisi di mercato</button>
-            <button id="btn-results" onclick="fetchResults()">Restituisci risultati</button>
-        </div>
-
-        <!-- Sezione Barra di Avanzamento: Analisi -->
-        <div id="progress-container-analysis" class="progress-wrapper">
-            <p id="status-text-analysis">Preparazione analisi...</p>
+    <!-- Sezione Aggiornamento Dati e Barra di Avanzamento Analisi -->
+    <div style="margin-bottom: 20px;">
+        <button id="btn-analysis" onclick="avviaAggiornamento()">Avvia analisi di mercato (Download)</button>
+        
+        <div id="progress-container-analysis" class="progress-container">
+            <p id="status-text-analysis" style="margin: 0; font-size: 13px; color: #333;">Preparazione analisi...</p>
             <div class="progress-bar-bg">
                 <div id="progress-bar-analysis" class="progress-bar-fill"></div>
             </div>
         </div>
-
-        <!-- Sezione Barra di Avanzamento: Risultati -->
-        <div id="progress-container-results" class="progress-wrapper">
-            <p id="status-text-results">Caricamento risultati...</p>
-            <div class="progress-bar-bg">
-                <div id="progress-bar-results" class="progress-bar-fill"></div>
-            </div>
-        </div>
     </div>
 
-    <script>
-        function pollProgress(containerId, barId, textId, onComplete) {
-            const container = document.getElementById(containerId);
-            const bar = document.getElementById(barId);
-            const text = document.getElementById(textId);
-            
-            container.style.display = "block";
-            
-            const interval = setInterval(() => {
-                fetch('/progress.json?' + new Date().getTime())
-                    .then(response => response.json())
-                    .then(data => {
-                        const percent = data.percent || 0;
-                        bar.style.width = percent + "%";
-                        text.innerText = data.status || `Progresso: ${percent}%`;
-                        
-                        if (percent >= 100) {
-                            clearInterval(interval);
-                            if (onComplete) onComplete(data);
-                        }
-                    })
-                    .catch(err => {
-                        console.error("Lettura progresso in corso...", err);
-                    });
-            }, 1000);
-        }
+    <div class="controls">
+        <select id="market"><option value="ALL">Tutti i mercati</option><option value="IT">Italia</option><option value="US">USA</option></select>
+        <select id="timeframe">
+            <option value="1w">1 Settimana</option><option value="1m" selected>1 Mese</option>
+            <option value="3m">3 Mesi</option><option value="6m">6 Mesi</option>
+            <option value="1y">1 Anno</option>
+        </select>
+        <input type="number" id="median" value="50" min="-100" max="100" placeholder="Min Mediana %">
+        <input type="number" id="std" value="10" min="0" max="1000" placeholder="Min Std %">
+        <button id="btn-results" onclick="caricaRisultati()">Restituisci risultati</button>
+    </div>
+    
+    <!-- Barra di Avanzamento Risultati -->
+    <div id="progress-container-results" class="progress-container">
+        <p id="status-text-results" style="margin: 0; font-size: 13px; color: #333;">Elaborazione risultati...</p>
+        <div class="progress-bar-bg">
+            <div id="progress-bar-results-fill" class="progress-bar-fill"></div>
+        </div>
+    </div>
+    
+    <div class="legend">
+        * <strong>Legenda Limiti:</strong> 
+        Mediana / Media (Min: -100%, Max: +100%). 
+        Deviazione Std / Media (Min: 0%, Max: 1000%). 
+        I filtri agiscono come limiti minimi inferiori ($\ge$).
+    </div>
 
-        function startAnalysis() {
-            const btn = document.getElementById('btn-analysis');
-            btn.disabled = true;
-            
-            // Nascondi eventuale box risultati precedente se aperto
-            document.getElementById('progress-container-results').style.display = "none";
+    <h3>🇮🇹 Azioni Italiane</h3>
+    <table id="table-it">
+        <thead><tr><th>Ticker</th><th>Prezzo</th><th>Var. Periodo</th><th>Var. Giorn.</th><th>Mediana/Media</th><th>Dev.Std/Media</th><th>Link</th></tr></thead>
+        <tbody id="body-it"></tbody>
+    </table>
 
-            fetch('/run-update', { method: 'POST' })
-                .then(response => {
-                    if (response.ok) {
-                        pollProgress(
-                            'progress-container-analysis', 
-                            'progress-bar-analysis', 
-                            'status-text-analysis', 
-                            (finalData) => {
-                                // Pop-up richiesto con i dati formattati a una cifra decimale
-                                alert(
-                                    "Analisi di mercato completata!\n\n" +
-                                    "• Azioni Italiane popolate: " + (finalData.it_count || 0) + "\n" +
-                                    "  Media anni di popolamento: " + (finalData.it_avg_years !== undefined ? finalData.it_avg_years.toFixed(1) : "0.0") + " anni\n\n" +
-                                    "• Azioni Americane popolate: " + (finalData.us_count || 0) + "\n" +
-                                    "  Media anni di popolamento: " + (finalData.us_avg_years !== undefined ? finalData.us_avg_years.toFixed(1) : "0.0") + " anni"
-                                );
-                                btn.disabled = false;
-                            }
-                        );
-                    }
-                })
-                .catch(err => {
-                    alert("Errore di connessione al server");
-                    btn.disabled = false;
-                });
-        }
+    <h3>🇺🇸 Azioni Americane</h3>
+    <table id="table-us">
+        <thead><tr><th>Ticker</th><th>Prezzo</th><th>Var. Periodo</th><th>Var. Giorn.</th><th>Mediana/Media</th><th>Dev.Std/Media</th><th>Link</th></tr></thead>
+        <tbody id="body-us"></tbody>
+    </table>
+</div>
 
-        function fetchResults() {
-            const container = document.getElementById('progress-container-results');
-            const bar = document.getElementById('progress-bar-results');
-            const text = document.getElementById('status-text-results');
-            
-            // Nascondi eventuale box analisi precedente se aperto
-            document.getElementById('progress-container-analysis').style.display = "none";
-
-            container.style.display = "block";
-            bar.style.width = "0%";
-            text.innerText = "Elaborazione risultati in corso...";
-
-            let progress = 0;
-            const fakeInterval = setInterval(() => {
-                progress += 25;
-                bar.style.width = progress + "%";
-                text.innerText = `Caricamento risultati... ${progress}%`;
+<script>
+function pollProgress(containerId, barId, textId, onComplete) {
+    const container = document.getElementById(containerId);
+    const bar = document.getElementById(barId);
+    const text = document.getElementById(textId);
+    
+    container.style.display = "block";
+    
+    const interval = setInterval(() => {
+        fetch('/progress.json?' + new Date().getTime())
+            .then(response => response.json())
+            .then(data => {
+                const percent = data.percent || 0;
+                bar.style.width = percent + "%";
+                text.innerText = data.status || `Progresso: ${percent}%`;
                 
-                if (progress >= 100) {
-                    clearInterval(fakeInterval);
-                    text.innerText = "Risultati pronti con successo!";
+                if (percent >= 100) {
+                    clearInterval(interval);
+                    if (onComplete) onComplete(data);
                 }
-            }, 300);
+            })
+            .catch(err => {
+                console.error("Lettura progresso in corso...", err);
+            });
+    }, 1000);
+}
+
+function avviaAggiornamento() {
+    const btn = document.getElementById('btn-analysis');
+    btn.disabled = true;
+
+    // Nascondi eventuale box risultati aperto
+    document.getElementById('progress-container-results').style.display = 'none';
+
+    fetch('/run-update', { method: 'POST' })
+        .then(response => {
+            if (response.ok) {
+                pollProgress(
+                    'progress-container-analysis', 
+                    'progress-bar-analysis', 
+                    'status-text-analysis', 
+                    (finalData) => {
+                        // Pop-up richiesto con i dati formattati a una cifra decimale
+                        alert(
+                            "Analisi di mercato completata!\n\n" +
+                            "• Azioni Italiane popolate: " + (finalData.it_count || 0) + "\n" +
+                            "  Media anni di popolamento: " + (finalData.it_avg_years !== undefined ? finalData.it_avg_years.toFixed(1) : "0.0") + " anni\n\n" +
+                            "• Azioni Americane popolate: " + (finalData.us_count || 0) + "\n" +
+                            "  Media anni di popolamento: " + (finalData.us_avg_years !== undefined ? finalData.us_avg_years.toFixed(1) : "0.0") + " anni"
+                        );
+                        btn.disabled = false;
+                    }
+                );
+            } else {
+                throw new Error("Errore server");
+            }
+        })
+        .catch(err => {
+            alert("Errore durante l'avvio dell'aggiornamento.");
+            btn.disabled = false;
+            document.getElementById('progress-container-analysis').style.display = 'none';
+        });
+}
+
+function caricaRisultati() {
+    const container = document.getElementById('progress-container-results');
+    const bar = document.getElementById('progress-bar-results-fill');
+    const text = document.getElementById('status-text-results');
+    
+    // Nascondi eventuale box analisi aperto
+    document.getElementById('progress-container-analysis').style.display = 'none';
+
+    container.style.display = 'block';
+    bar.style.width = '0%';
+    text.innerText = "Elaborazione risultati in corso...";
+
+    const params = {
+        market: document.getElementById('market').value,
+        timeframe: document.getElementById('timeframe').value,
+        median: document.getElementById('median').value,
+        std: document.getElementById('std').value
+    };
+
+    // Simulazione o caricamento reale con progress bar fittizia rapida
+    let progress = 0;
+    const fakeInterval = setInterval(() => {
+        progress += 25;
+        bar.style.width = progress + "%";
+        text.innerText = `Elaborazione risultati... ${progress}%`;
+        
+        if (progress >= 100) {
+            clearInterval(fakeInterval);
+            
+            // Chiamata API effettiva per popolare le tabelle
+            fetch('/api/get-results', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params)
+            })
+            .then(res => res.json())
+            .then(data => {
+                container.style.display = 'none';
+                const bodyIt = document.getElementById('body-it');
+                const bodyUs = document.getElementById('body-us');
+                bodyIt.innerHTML = ''; bodyUs.innerHTML = '';
+
+                if (!data || data.length === 0) {
+                    bodyIt.innerHTML = `<tr><td colspan="7">Nessun risultato trovato.</td></tr>`;
+                    bodyUs.innerHTML = `<tr><td colspan="7">Nessun risultato trovato.</td></tr>`;
+                    return;
+                }
+
+                data.forEach(item => {
+                    const row = `<tr>
+                        <td>${item.ticker}</td>
+                        <td>${item.price}</td>
+                        <td>${item.var_period}%</td>
+                        <td>${item.var_daily}%</td>
+                        <td>${item.med_mean_ratio}%</td>
+                        <td>${item.std_mean_ratio}%</td>
+                        <td><a href="https://it.investing.com/search/?q=${item.ticker.split('.')[0]}" target="_blank">Vai</a></td>
+                    </tr>`;
+                    
+                    if (item.ticker.endsWith('.MI') || item.ticker.endsWith('.AS')) {
+                        bodyIt.innerHTML += row;
+                    } else {
+                        bodyUs.innerHTML += row;
+                    }
+                });
+            })
+            .catch(err => {
+                container.style.display = 'none';
+                console.error(err);
+            });
         }
-    </script>
+    }, 200);
+}
+</script>
 </body>
 </html>
