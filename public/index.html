@@ -1,16 +1,179 @@
-<table id="results-table">
-    <thead>
-        <tr>
-            <th>Ticker</th>
-            <th>Prezzo (€/$)</th>
-            <th>Var. Periodo (%)</th>
-            <th>Var. Giornaliera (%)</th>
-            <th>Mediana / Media (%)</th>
-            <th>Dev. Std / Media (%)</th>
-            <th>Link</th>
-        </tr>
-    </thead>
-    <tbody id="table-body">
-        <!-- I risultati dinamici verranno inseriti qui via JavaScript -->
-    </tbody>
-</table>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CIAK!-AZIONI</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
+        h1 { color: #2c3e50; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        label { display: block; margin-top: 10px; font-weight: bold; }
+        select, input, button { padding: 8px; margin-top: 5px; width: 100%; max-width: 300px; box-sizing: border-box; }
+        button { background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 15px; }
+        button:hover { background-color: #2980b9; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        th { background-color: #2c3e50; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        #progress-container { margin-top: 15px; display: none; }
+        progress { width: 100%; height: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>CIAK!-AZIONI - Analizzatore di Mercato</h1>
+
+    <!-- Sezione Aggiornamento Dati -->
+    <div class="card">
+        <h2>1. Aggiornamento Dati di Mercato</h2>
+        <button id="btn-update" onclick="avviaAggiornamento()">Avvia analisi di mercato (Download)</button>
+        <div id="progress-container">
+            <p id="progress-status">In attesa...</p>
+            <progress id="progress-bar" value="0" max="100"></progress>
+        </div>
+    </div>
+
+    <!-- Sezione Filtri e Risultati -->
+    <div class="card">
+        <h2>2. Filtri e Ricerca</h2>
+        <label for="market">Mercato:</label>
+        <select id="market">
+            <option value="IT">Italia (IT)</option>
+            <option value="US">Stati Uniti (US)</option>
+        </select>
+
+        <label for="timeframe">Timeframe:</label>
+        <select id="timeframe">
+            <option value="1w">1 Settimana</option>
+            <option value="1m" selected>1 Mese</option>
+            <option value="3m">3 Mesi</option>
+            <option value="6m">6 Mesi</option>
+            <option value="1y">1 Anno</option>
+            <option value="ytd">YTD</option>
+        </select>
+
+        <label for="median">Mediana / Media Minima (%):</label>
+        <input type="number" id="median" value="50" step="0.5">
+
+        <label for="std">Dev. Std / Media Minima (%):</label>
+        <input type="number" id="std" value="10" step="0.5">
+
+        <button onclick="caricaRisultati()">Restituisci risultati</button>
+    </div>
+
+    <!-- Tabella Risultati -->
+    <div class="card">
+        <h2>Risultati</h2>
+        <table id="results-table">
+            <thead>
+                <tr>
+                    <th>Ticker</th>
+                    <th>Prezzo</th>
+                    <th>Var. Periodo (%)</th>
+                    <th>Var. Giornaliera (%)</th>
+                    <th>Mediana / Media (%)</th>
+                    <th>Dev. Std / Media (%)</th>
+                    <th>Link</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <tr>
+                    <td colspan="7">Nessun dato caricato. Usa i filtri sopra per cercare.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Funzione per avviare il download/aggiornamento dei dati
+        function avviaAggiornamento() {
+            const btn = document.getElementById('btn-update');
+            const container = document.getElementById('progress-container');
+            btn.disabled = true;
+            container.style.display = 'block';
+
+            fetch('/api/update-market', { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    console.log(data.message);
+                    controllaProgresso();
+                })
+                .catch(err => {
+                    alert("Errore nell'avvio dell'aggiornamento.");
+                    btn.disabled = false;
+                    container.style.display = 'none';
+                });
+        }
+
+        // Funzione di polling per tracciare la barra di progressione
+        function controllaProgresso() {
+            const interval = setInterval(() => {
+                fetch('/api/progress')
+                    .then(res => res.json())
+                    .then(data => {
+                        const progressBar = document.getElementById('progress-bar');
+                        const progressStatus = document.getElementById('progress-status');
+                        
+                        progressBar.value = data.percent;
+                        progressStatus.innerText = `${data.status} (${data.percent}%)`;
+
+                        if (data.percent >= 100) {
+                            clearInterval(interval);
+                            document.getElementById('btn-update').disabled = false;
+                            alert("Aggiornamento completato con successo!");
+                        }
+                    })
+                    .catch(() => {
+                        clearInterval(interval);
+                        document.getElementById('btn-update').disabled = false;
+                    });
+            }, 1500);
+        }
+
+        // Funzione per inviare i parametri e popolare la tabella dei risultati
+        function caricaRisultati() {
+            const market = document.getElementById('market').value;
+            const timeframe = document.getElementById('timeframe').value;
+            const median = parseFloat(document.getElementById('median').value) || 0;
+            const std = parseFloat(document.getElementById('std').value) || 0;
+
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = `<tr><td colspan="7">Caricamento in corso...</td></tr>`;
+
+            fetch('/api/get-results', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ market, timeframe, median, std })
+            })
+            .then(res => res.json())
+            .then(data => {
+                tableBody.innerHTML = '';
+
+                if (!data || data.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="7">Nessun risultato trovato con i filtri selezionati.</td></tr>`;
+                    return;
+                }
+
+                // Mappatura corretta dei campi e popolamento della tabella
+                data.forEach(item => {
+                    const row = `<tr>
+                        <td><strong>${item.ticker}</strong></td>
+                        <td>${item.prezzo}</td>
+                        <td>${item.perf1}%</td>
+                        <td>${item.perf2}%</td>
+                        <td>${item.perf3}%</td>
+                        <td>${item.perf4}%</td>
+                        <td><a href="${item.url}" target="_blank">Apri</a></td>
+                    </tr>`;
+                    tableBody.innerHTML += row;
+                });
+            })
+            .catch(err => {
+                console.error("Errore nel recupero dei risultati:", err);
+                tableBody.innerHTML = `<tr><td colspan="7">Errore durante il caricamento dei dati.</td></tr>`;
+            });
+        }
+    </script>
+</body>
+</html>
