@@ -12,6 +12,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Rotta per i progressi del download
 app.get('/api/progress', (req, res) => {
     try {
         const progressData = fs.readFileSync('progress.json', 'utf8');
@@ -21,6 +22,7 @@ app.get('/api/progress', (req, res) => {
     }
 });
 
+// Rotta per scaricare il file log errori
 app.get('/api/download-log', (req, res) => {
     const logPath = path.join(__dirname, 'error_log.txt');
     if (fs.existsSync(logPath)) {
@@ -30,6 +32,41 @@ app.get('/api/download-log', (req, res) => {
     }
 });
 
+// Rotta fondamentale: chiama analyzer.py per restituire i calcoli alla tabella
+app.get('/api/data', (req, res) => {
+    const { market, period, medianMarkup, stdMarkup, sortBy, sortOrder } = req.query;
+    
+    const args = [
+        'analyzer.py',
+        market || 'it',
+        period || '1y',
+        medianMarkup || '0',
+        stdMarkup || '0',
+        sortBy || 'perf',
+        sortOrder || 'desc'
+    ];
+
+    const pythonProcess = spawn('python3', args);
+    let dataString = '';
+
+    pythonProcess.stdout.on('data', (data) => {
+        dataString += data.toString();
+    });
+
+    pythonProcess.on('close', (code) => {
+        if (code !== 0) {
+            return res.status(500).json({ error: "Errore durante l'elaborazione dei dati." });
+        }
+        try {
+            const results = JSON.parse(dataString);
+            res.json(results);
+        } catch (err) {
+            res.status(500).json({ error: "Errore nel parsing JSON dei risultati." });
+        }
+    });
+});
+
+// Rotta per avviare il download dell'intero archivio
 app.post('/api/run-analysis', (req, res) => {
     console.log("Ricevuto comando: Inizio elaborazione database...");
     
@@ -40,7 +77,6 @@ app.post('/api/run-analysis', (req, res) => {
     }
 
     const pythonProcess = spawn('python3', ['update_db.py']);
-    
     res.json({ success: true, message: "Processo avviato." });
 
     pythonProcess.on('close', (code) => {
