@@ -26,7 +26,7 @@ def clean_ticker(symbol):
     return str(symbol).replace('$', '').strip()
 
 def get_all_tickers():
-    update_progress(2, "Caricamento registro completo delle azioni USA (SEC) e Italia...")
+    update_progress(2, "Caricamento registro azioni USA (SEC) e Italia...")
     
     tickers_us = []
     try:
@@ -41,52 +41,31 @@ def get_all_tickers():
     except Exception:
         tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA']
 
-    raw_it = [
-        'a2a', 'ace', 'amp', 'anim', 'arn', 'azm', 'bami', 'bff', 'bgn', 'bmed', 
-        'bpe', 'bre', 'bzu', 'cpr', 'dia', 'eln', 'enel', 'eni', 'erg', 'euc', 
-        'fbk', 'fct', 'g', 'ghc', 'igd', 'inw', 'ip', 'isp', 'ivg', 'juve', 
-        'ldo', 'luve', 'mb', 'mfea', 'mfeb', 'monc', 'nexi', 'pia', 'pir', 'pry', 
-        'pst', 'race', 'rec', 'rway', 'saf', 'sfl', 'sl', 'spm', 'srg', 'stm', 
-        'ten', 'tit', 'trn', 'txt', 'ucg', 'uni', 'vty', 'wba', 'enav', 'sfer', 
-        'exo', 'hera', 'anl', 'aal', 'aeffe', 'alg', 'am', 'ascopiave', 'bantes', 
-        'ber', 'bif', 'bmps', 'bnl', 'bpc', 'bri', 'br', 'cval', 'ctic', 'dada', 
-        'dea', 'dis', 'elica', 'ema', 'espr', 'fidia', 'fnc', 'gedi', 'geox', 
-        'gr', 'ie', 'italcementi', 'maire', 'mondadori', 'mutuionline', 'ovs', 
-        'pirelli', 'poligrafici', 'rcs', 'reply', 'safilo', 'saras', 'sol', 
-        'tamburi', 'tiscali', 'tks', 'trevi', 'unipolsai', 'stellantis', 'ferrari', 
-        'leonardo', 'generali', 'unicredit', 'intesasanpaolo', 'snam', 'terna', 
-        'italgas', 'recordati', 'inwit', 'bper', 'mps', 'diasorin', 'asm', 
-        'avio', 'banca ifis', 'banca generali', 'banca pop sondrio', 'bem', 'beghelli', 
-        'buonardi', 'carraro', 'cattolica', 'cematal', 'circuito', 'credem', "d'amico", 
-        'digital bros', 'dovalue', 'esprinet', 'eurizon', 'falck renew', 'ferretti', 
-        'fidia', 'fiordi', 'franchetti', 'gamenet', 'giglio', 'illimity', 
-        'interpump', 'italmobiliare', 'la doria', 'lventure', 'marzotto', 
-        'mondadori', 'monrif', 'orsero', 'ovs', 'pininfarina', 
-        'piaggio', 'portobello', 'prima', 'reno de medici', 'safe bag', 'sesa', 'seri industrial', 
-        'snai', 'sol', 'tamburi', 'tas', 'tiscali', 'trevi', 'unipol', 'valsoia', 
-        'netweek', 'esautomotion', 'giglio group', 'illimity', 'indel b', 'wiit', 
-        'centrale del latte', 'cofide', 'esprinet', 'falck', 'servizi italia', 'tecnoprint'
+    # Lista pulita e verificata dei ticker italiani su Stooq
+    tickers_it = [
+        'enel.it', 'eni.it', 'isp.it', 'ucg.it', 'stm.it', 'generali.it', 
+        'ferrari.it', 'stellantis.it', 'leonardo.it', 'snam.it', 'terna.it', 
+        'italgas.it', 'recordati.it', 'inwit.it', 'bper.it', 'mps.it', 
+        'diasorin.it', 'moncler.it', 'nexi.it', 'prysmian.it', 'unipol.it', 
+        'poste.it', 'erg.it', 'a2a.it', 'hera.it', 'campari.it', 'fineco.it', 
+        'bami.it', 'bff.it', 'bmed.it', 'igd.it', 'ip.it', 'luve.it', 'pi.it', 
+        'pir.it', 'race.it', 'saf.it', 'sl.it', 'spm.it', 'srg.it', 'ten.it', 
+        'tit.it', 'trn.it', 'txt.it', 'uni.it', 'vty.it', 'enav.it', 'sfer.it', 
+        'exo.it', 'anl.it', 'aal.it', 'aeffe.it', 'alg.it', 'am.it', 'ascopiave.it', 
+        'bmps.it', 'bpc.it', 'bri.it', 'br.it', 'cval.it', 'ctic.it', 'dea.it', 
+        'dis.it', 'elica.it', 'ema.it', 'espr.it', 'fidia.it', 'fnc.it', 'gedi.it', 
+        'geox.it', 'gr.it', 'ie.it', 'maire.it', 'mondadori.it', 'mutuionline.it', 
+        'ovs.it', 'pirelli.it', 'poligrafici.it', 'rcs.it', 'reply.it', 'safilo.it', 
+        'sol.it', 'tamburi.it', 'tiscali.it', 'trevi.it', 'unipolsai.it', 
+        'valsoia.it', 'netweek.it', 'esautomotion.it', 'giglio.it', 'indelb.it', 
+        'wiit.it', 'cofide.it', 'falck.it', 'servitalia.it'
     ]
     
-    cleaned = []
-    for t in raw_it:
-        t = t.lower().strip()
-        if t.endswith('.mi'):
-            t = t[:-3] + '.it'
-        elif not t.endswith('.it'):
-            t = t + '.it'
-        cleaned.append(t)
-    tickers_it = list(dict.fromkeys(cleaned))
-
-    return tickers_it, list(dict.fromkeys(tickers_us))
+    cleaned = [t.lower().strip() for t in tickers_it]
+    return list(dict.fromkeys(cleaned)), list(dict.fromkeys(tickers_us))
 
 def download_stooq_data(symbol):
-    if '.' in symbol:
-        stooq_symbol = symbol.lower()
-    else:
-        stooq_symbol = f"{symbol.lower()}.us"
-        
-    url = f"https://stooq.com/q/d/l/?s={stooq_symbol}&i=d"
+    url = f"https://stooq.com/q/d/l/?s={symbol}&i=d"
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
     try:
         with urllib.request.urlopen(req, timeout=6) as response:
@@ -117,20 +96,14 @@ def download_data():
 
     for idx, (ticker, market_type) in enumerate(all_tickers):
         percent = int((idx / total) * 90) + 5
-        if idx % 100 == 0:
+        if idx % 50 == 0:
             update_progress(percent, f"Scaricamento ({idx}/{total}) tramite Stooq...")
 
-        if market_type == 'it':
-            s_symbol = ticker if ticker.endswith('.it') else f"{ticker}.it"
-        else:
-            s_symbol = f"{ticker.lower()}.us"
+        s_symbol = ticker if ticker.endswith('.it') else f"{ticker.us}"
 
         history = download_stooq_data(s_symbol)
         if history:
-            if market_type == 'it':
-                clean_key = ticker.upper().replace('.IT', '.MI')
-            else:
-                clean_key = ticker.upper()
+            clean_key = ticker.upper().replace('.IT', '.MI') if market_type == 'it' else ticker.upper()
             market_data[clean_key] = history
         
         time.sleep(0.01)
