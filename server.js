@@ -12,7 +12,6 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Rotta per leggere lo stato della barra di avanzamento
 app.get('/api/progress', (req, res) => {
     try {
         const progressData = fs.readFileSync('progress.json', 'utf8');
@@ -22,23 +21,20 @@ app.get('/api/progress', (req, res) => {
     }
 });
 
-// Rotta per scaricare il file di log in caso di errore
 app.get('/api/download-log', (req, res) => {
     const logPath = path.join(__dirname, 'error_log.txt');
     if (fs.existsSync(logPath)) {
         res.download(logPath);
     } else {
-        res.status(404).send("Nessun file di log trovato. Nessun errore registrato.");
+        res.status(404).send("Nessun file di log trovato.");
     }
 });
 
-// Avvia l'analisi / aggiornamento database
 app.post('/api/run-analysis', (req, res) => {
     console.log("Ricevuto comando: Inizio elaborazione database...");
     
     fs.writeFileSync('progress.json', JSON.stringify({ percent: 0, status: "Inizializzazione script..." }));
     
-    // Pulisci il vecchio log errori se esiste
     if (fs.existsSync('error_log.txt')) {
         fs.unlinkSync('error_log.txt');
     }
@@ -52,7 +48,7 @@ app.post('/api/run-analysis', (req, res) => {
         if (code === 0) {
             fs.writeFileSync('progress.json', JSON.stringify({ percent: 100, status: "Completato!" }));
         } else {
-            fs.writeFileSync('progress.json', JSON.stringify({ percent: 100, status: "Errore durante il processo! Scarica il log." }));
+            fs.writeFileSync('progress.json', JSON.stringify({ percent: 100, status: "Errore durante il processo!" }));
         }
     });
 
