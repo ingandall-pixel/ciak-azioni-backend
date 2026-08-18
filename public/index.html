@@ -101,8 +101,8 @@
             const periodoScelto = document.getElementById('select-periodo').value;
 
             for (const [ticker, storico] of Object.entries(globalMarketData)) {
-                // Filtra in base al mercato selezionato
-                const isIt = ticker.endswith('.MI') || ticker.endswith('.AS') || !ticker.match(/^[A-Z\-]+$/);
+                // Filtra in base al mercato selezionato (corretto con endsWith maiuscolo)
+                const isIt = ticker.endsWith('.MI') || ticker.endsWith('.AS') || !/^[A-Z\-]+$/.test(ticker);
                 if (currentMarket === 'IT' && !isIt) continue;
                 if (currentMarket === 'US' && isIt) continue;
 
@@ -157,7 +157,7 @@
                 renderTable();
             } catch (error) {
                 document.getElementById('status-box').className = 'alert alert-danger';
-                document.getElementById('status-box').innerText = 'Errore nel caricamento dei dati di mercato.';
+                document.getElementById('status-box').innerText = 'Errore nel caricamento dei dati di mercato: ' + error.message;
             }
         }
 
