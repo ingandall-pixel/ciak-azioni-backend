@@ -4,106 +4,66 @@ const path = require('path');
 const fs = require('fs');
 const app = express();
 
-let isAnalyzing = false; // Previeni sovrapposizione di istanze parallele
-
+// --- CONFIGURAZIONI BASE ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// --- ROTTA PRINCIPALE ---
+// Carica l'interfaccia grafica (la tua Home con il titolo "CIAK! - AZIONI 🖕")
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Stato di avanzamento
+// --- ROTTA PROGRESSO ---
+// Il frontend chiama questa rotta ogni secondo per far muovere la barra di caricamento
 app.get('/api/progress', (req, res) => {
     try {
+        // Legge lo stato dal file aggiornato dallo script Python
         const progressData = fs.readFileSync('progress.json', 'utf8');
         res.json(JSON.parse(progressData));
     } catch (err) {
-        res.json({ percent: 0, status: "Pronto per l'avvio..." });
+        // Se il file non esiste ancora, restituisce 0%
+        res.json({ percent: 0, status: "Avvio in corso..." });
     }
 });
 
-// Download del file log di errore
-app.get('/api/download-log', (req, res) => {
-    const logPath = path.join(__dirname, 'error_log.txt');
-    if (fs.existsSync(logPath)) {
-        res.download(logPath);
-    } else {
-        res.status(404).send("Nessun file di log trovato.");
-    }
-});
-
-// Esecuzione dell'algoritmo di analisi e restituzione dati al frontend
-app.get('/api/data', (req, res) => {
-    const { market, period, medianMarkup, stdMarkup, sortBy, sortOrder } = req.query;
-    
-    const args = [
-        'analyzer.py',
-        market || 'it',
-        period || '1y',
-        medianMarkup || '0',
-        stdMarkup || '0',
-        sortBy || 'perf',
-        sortOrder || 'desc'
-    ];
-
-    const pythonProcess = spawn('python3', args);
-    let dataString = '';
-
-    pythonProcess.stdout.on('data', (data) => {
-        dataString += data.toString();
-    });
-
-    pythonProcess.on('close', (code) => {
-        if (code !== 0) {
-            return res.status(500).json({ error: "Errore durante l'elaborazione dei dati." });
-        }
-        try {
-            const results = JSON.parse(dataString);
-            res.json(results);
-        } catch (err) {
-            res.status(500).json({ error: "Errore nel parsing JSON dei risultati." });
-        }
-    });
-});
-
-// Avvio aggiornamento database
+// --- ROTTA AVVIO ANALISI ---
+// Si attiva quando clicchi "Avvia analisi" o quando parte l'automazione notturna
 app.post('/api/run-analysis', (req, res) => {
-    if (isAnalyzing) {
-        return res.status(400).json({ success: false, message: "Aggiornamento già in corso." });
-    }
-
-    isAnalyzing = true;
-    console.log("Ricevuto comando: Inizio aggiornamento database completo...");
+    console.log("Ricevuto comando: Inizio costruzione/aggiornamento Database...");
     
-    fs.writeFileSync('progress.json', JSON.stringify({ percent: 0, status: "Inizializzazione script..." }));
+    // 1. Inizializza/Resetta il file di progresso a 0
+    fs.writeFileSync('progress.json', JSON.stringify({ percent: 0, status: "Inizializzazione script Python..." }));
     
-    if (fs.existsSync('error_log.txt')) {
-        fs.unlinkSync('error_log.txt');
-    }
-
+    // 2. Lancia lo script di aggiornamento Intelligente (update_db.py)
     const pythonProcess = spawn('python3', ['update_db.py']);
-    res.json({ success: true, message: "Processo avviato." });
+    
+    // 3. Risponde SUBITO al frontend. 
+    // In questo modo il browser non rimane in caricamento per minuti, ma fa partire la barra.
+    res.json({ success: true, message: "Processo avviato in background." });
 
+    // 4. Gestione della chiusura del processo Python (Vero completamento o Crash)
     pythonProcess.on('close', (code) => {
-        isAnalyzing = false;
         console.log(`Script Python terminato con codice ${code}`);
         if (code === 0) {
+            // Se finisce con codice 0, significa che è andato tutto perfettamente
             fs.writeFileSync('progress.json', JSON.stringify({ percent: 100, status: "Completato!" }));
         } else {
-            fs.writeFileSync('progress.json', JSON.stringify({ percent: 100, status: "Errore durante il processo!" }));
+            // Se finisce con qualsiasi altro codice, è crashato!
+            fs.writeFileSync('progress.json', JSON.stringify({ percent: 100, status: "Errore! Guarda i log di Render" }));
         }
     });
 
+    // Registra gli errori di Python direttamente nei log di Render per facilitare il debug
     pythonProcess.stderr.on('data', (data) => {
-        const errMessage = data.toString();
-        console.error(`ERRORE PYTHON: ${errMessage}`);
-        fs.appendFileSync('error_log.txt', `${new Date().toISOString()} - ${errMessage}\n`);
+        console.error(`ERRORE PYTHON: ${data.toString()}`);
     });
 });
 
+// --- AVVIO DEL SERVER ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server attivo sulla porta ${PORT}`);
+    console.log(`Server attivo e in ascolto sulla porta ${PORT}`);
+    console.log(`Pronto per gestire l'analisi del mercato Italiano e Americano.`);
 });
