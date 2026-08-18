@@ -1,13 +1,13 @@
 {
-  "name": "ciak-azioni-backend",
+  "name": "stock-market-analyzer",
   "version": "1.0.0",
-  "description": "Backend per analisi mercati azionari IT e US",
+  "description": "Dashboard di analisi statistica per mercati IT e US",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.19.2"
+    "express": "^4.18.2"
   }
 }
