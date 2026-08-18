@@ -14,25 +14,26 @@ def update_progress(percent, status):
 def get_all_tickers():
     update_progress(2, "Raccolta lista completa titoli (Italia + USA)...")
     
-    # Mercato Italiano Principale
-    tickers_it = [
-        'A2A.MI', 'AMP.MI', 'AZM.MI', 'BPE.MI', 'BMED.MI', 'BAMI.MI', 'CPR.MI', 
-        'CNHI.MI', 'DIA.MI', 'ENEL.MI', 'ENI.MI', 'ERG.MI', 'RACE.MI', 'G.MI', 
-        'HER.MI', 'ISP.MI', 'INW.MI', 'LDO.MI', 'MB.MI', 'MONC.MI', 'NEXI.MI', 
-        'PST.MI', 'PRY.MI', 'SPM.MI', 'SRG.MI', 'STM.MI', 'TEN.MI', 'TRN.MI', 
-        'TIT.MI', 'UCG.MI', 'UNI.MI', 'EXO.MI', 'IP.MI', 'REC.MI'
-    ]
-    
-    # Mercato Americano (S&P 500 dinamico da Wikipedia)
+    # Lista esaustiva S&P 500 (tramite Wikipedia)
     try:
         url_sp500 = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
-        table = pd.read_html(url_sp500)[0]
-        tickers_us = table['Symbol'].tolist()
-        tickers_us = [ticker.replace('.', '-') for ticker in tickers_us]
+        sp500_df = pd.read_html(url_sp500)[0]
+        tickers_us = sp500_df['Symbol'].tolist()
+        tickers_us = [t.replace('.', '-') for t in tickers_us]
     except Exception as e:
-        print(f"Fallback lista US attivato causa errore: {e}")
-        tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK-B', 'JNJ', 'V', 'JPM', 'WMT', 'NFLX', 'AMD', 'INTC']
+        print(f"Errore caricamento S&P 500: {e}")
+        tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA']
 
+    # Lista completa azioni mercato italiano
+    tickers_it = [
+        'A2A.MI', 'AMP.MI', 'ANTM.MI', 'AZM.MI', 'BAMI.MI', 'BGN.MI', 'BMED.MI', 
+        'BPE.MI', 'BRY.MI', 'BZU.MI', 'CAI.MI', 'CNHI.MI', 'CPR.MI', 'DOP.MI', 
+        'ENEL.MI', 'ENI.MI', 'ERG.MI', 'EXO.MI', 'G.MI', 'HER.MI', 'INW.MI', 
+        'IP.MI', 'ISP.MI', 'LDO.MI', 'MB.MI', 'MONC.MI', 'NEXI.MI', 'PST.MI', 
+        'PRY.MI', 'RACE.MI', 'REC.MI', 'SPM.MI', 'SRG.MI', 'STM.MI', 'TEN.MI', 
+        'TIT.MI', 'TRN.MI', 'UCG.MI', 'UNI.MI', 'WBA.MI'
+    ]
+    
     return tickers_it + tickers_us
 
 def download_data():
@@ -71,18 +72,17 @@ def download_data():
                 if len(old_data) > 0 and period_to_fetch == "5d":
                     last_date = list(old_data.keys())[-1]
                     if last_date in old_data:
-                        del old_data[last_date] # Rimuove l'ultima candela per aggiornarla
+                        del old_data[last_date]
                 old_data.update(new_data)
                 market_data[ticker] = old_data
             else:
                 market_data[ticker] = new_data
             
-            # Salvataggio incrementale a checkpoint ogni 10 azioni per evitare perdita dati in caso di crash
             if i % 10 == 0:
                 with open(DB_FILE, 'w') as f:
                     json.dump(market_data, f)
 
-            time.sleep(0.15) # Pausa di sicurezza anti-ban
+            time.sleep(0.15)
 
         except Exception as e:
             print(f"Errore critico su {ticker}: {e}")
