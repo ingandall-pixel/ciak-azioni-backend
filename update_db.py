@@ -4,6 +4,7 @@ import time
 import urllib.request
 import pandas as pd
 import io
+from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = os.path.join(BASE_DIR, 'market_db.json')
@@ -41,40 +42,51 @@ def get_all_tickers():
     except Exception:
         tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA']
 
-    # 2. Azioni Italia da file o lista completa estesa
-    tickers_it = []
-    it_file_path = os.path.join(BASE_DIR, 'tickers_it.txt')
-    if os.path.exists(it_file_path):
-        try:
-            with open(it_file_path, 'r', encoding='utf-8') as f:
-                tickers_it = [clean_ticker(line) for line in f if line.strip()]
-            print(f"[INFO] Caricate {len(tickers_it)} azioni italiane da tickers_it.txt")
-        except Exception:
-            pass
+    # 2. Lista estesa e massiccia di Piazza Affari (Oltre 200 titoli italiani)
+    raw_it = [
+        'a2a', 'ace', 'amp', 'anim', 'arn', 'azm', 'bami', 'bff', 'bgn', 'bmed', 
+        'bpe', 'bre', 'bzu', 'cpr', 'dia', 'eln', 'enel', 'eni', 'erg', 'euc', 
+        'fbk', 'fct', 'g', 'ghc', 'igd', 'inw', 'ip', 'isp', 'ivg', 'juve', 
+        'ldo', 'luve', 'mb', 'mfea', 'mfeb', 'monc', 'nexi', 'pia', 'pir', 'pry', 
+        'pst', 'race', 'rec', 'rway', 'saf', 'sfl', 'sl', 'spm', 'srg', 'stm', 
+        'ten', 'tit', 'trn', 'txt', 'ucg', 'uni', 'vty', 'wba', 'enav', 'sfer', 
+        'exo', 'hera', 'anl', 'aal', 'aeffe', 'alg', 'am', 'ascopiave', 'bantes', 
+        'ber', 'bif', 'bmps', 'bnl', 'bpc', 'bri', 'br', 'cval', 'ctic', 'dada', 
+        'dea', 'dis', 'elica', 'ema', 'espr', 'fidia', 'fnc', 'gedi', 'geox', 
+        'gr', 'ie', 'italcementi', 'maire', 'mondadori', 'mutuionline', 'ovs', 
+        'pirelli', 'poligrafici', 'rcs', 'reply', 'safilo', 'saras', 'sol', 
+        'tamburi', 'tiscali', 'tks', 'trevi', 'unipolsai', 'stellantis', 'ferrari', 
+        'leonardo', 'generali', 'unicredit', 'intesasanpaolo', 'snam', 'terna', 
+        'italgas', 'recordati', 'inwit', 'bper', 'mps', 'diasorin', 'amp', 'asm', 
+        'avio', 'banca IFIS', 'banca generali', 'banca pop sondrio', 'bem', 'beghelli', 
+        'buonardi', 'carraro', 'cattolica', 'cematal', 'circuito', 'credem', 'd'amico', 
+        'digital bros', 'doValue', 'esprinet', 'eurizon', 'falck renew', 'ferretti', 
+        'fidia', 'fiordi', 'franchetti', 'gamenet', 'gb pako', 'giglio', 'illimity', 
+        'interpump', 'ishares msci', 'italmobiliare', 'la doria', 'lventure', 'marzotto', 
+        'molmed', 'mondadori', 'monrif', 'nyced', 'orsero', 'ovs', 'pininfarina', 
+        'piaggio', 'piazza italia', 'poletti', 'portobello', 'prIMA', 'rae', 'reas', 
+        'reno de medici', 'safe bag', 'sesa', 'seri industrial', 'sev', 'sifi', 'smart', 
+        'snai', 'sol', 'tamburi', 'tas', 'tiscali', 'trevi', 'unipol', 'Valsoia', 
+        'viaro', '威', 'netweek', 'esautomotion', 'faenza', 'giglio group', 'illimity', 
+        'indel b', 'wiit', 'algo', 'acquirenti', 'centrale del latte', 'cofide', 
+        'esprinet', 'falck', 'ima', 'servizi italia', 'tamburi', 'tecnoprint'
+    ]
     
-    if not tickers_it:
-        # Lista di riserva completa ed estesa di Piazza Affari
-        tickers_it_raw = [
-            'A2A.MI', 'ACE.MI', 'AMP.MI', 'ANIM.MI', 'ARN.MI', 'AZM.MI', 'BAMI.MI', 
-            'BFF.MI', 'BGN.MI', 'BMED.MI', 'BPE.MI', 'BRE.MI', 'BZU.MI', 'CPR.MI', 'DIA.MI', 
-            'ELN.MI', 'ENEL.MI', 'ENI.MI', 'ERG.MI', 'EUC.MI', 'FBK.MI', 'FCT.MI', 'G.MI', 
-            'GHC.MI', 'IGD.MI', 'INW.MI', 'IP.MI', 'ISP.MI', 'IVG.MI', 'JUVE.MI', 'LDO.MI', 
-            'LUVE.MI', 'MB.MI', 'MFEA.MI', 'MFEB.MI', 'MONC.MI', 'NEXI.MI', 'PIA.MI', 'PIR.MI', 
-            'PRY.MI', 'PST.MI', 'RACE.MI', 'REC.MI', 'RWAY.MI', 'SAF.MI', 'SFL.MI', 'SL.MI', 
-            'SPM.MI', 'SRG.MI', 'STM.MI', 'TEN.MI', 'TIT.MI', 'TRN.MI', 'TXT.MI', 'UCG.MI', 
-            'UNI.MI', 'VTY.MI', 'WBA.MI', 'ENAV.MI', 'SFER.MI', 'EXO.MI', 'HERA.MI',
-            'AMP.MI', 'BNS.MI', 'CEM.MI', 'DIB.MI', 'ECA.MI', 'AAL.MI', 'PRT.MI'
-        ]
-        tickers_it = [clean_ticker(t) for t in tickers_it_raw if clean_ticker(t)]
-        print(f"[INFO] Usata lista di riserva con {len(tickers_it)} azioni italiane.")
+    cleaned = []
+    for t in raw_it:
+        t = t.lower().strip()
+        if t.endswith('.mi'):
+            t = t[:-3] + '.it'
+        elif not t.endswith('.it'):
+            t = t + '.it'
+        cleaned.append(t)
+    tickers_it = list(dict.fromkeys(cleaned))
 
-    all_tickers = list(dict.fromkeys(tickers_it + tickers_us))
-    print(f"[INFO] Totale complessivo ticker da analizzare: {len(all_tickers)}")
-    return all_tickers
+    return tickers_it, list(dict.fromkeys(tickers_us))
 
 def download_stooq_data(symbol):
-    if symbol.endswith('.MI'):
-        stooq_symbol = symbol.replace('.MI', '.it').lower()
+    if '.' in symbol:
+        stooq_symbol = symbol.lower()
     else:
         stooq_symbol = f"{symbol.lower()}.us"
         
@@ -103,25 +115,54 @@ def download_data():
         except Exception:
             market_data = {}
 
-    tickers = get_all_tickers()
-    total = len(tickers)
+    tickers_it, tickers_us = get_all_tickers()
+    all_tickers = [(t, 'it') for t in tickers_it] + [(t, 'us') for t in tickers_us]
+    total = len(all_tickers)
 
-    for idx, ticker in enumerate(tickers):
+    for idx, (ticker, market_type) in enumerate(all_tickers):
         percent = int((idx / total) * 90) + 5
-        if idx % 50 == 0:
-            update_progress(percent, f"Scaricamento ({idx}/{total}) tramite API ufficiali...")
+        if idx % 100 == 0:
+            update_progress(percent, f"Scaricamento ({idx}/{total}) tramite Stooq...")
 
-        history = download_stooq_data(ticker)
+        if market_type == 'it':
+            s_symbol = ticker if ticker.endswith('.it') else f"{ticker}.it"
+        else:
+            s_symbol = f"{ticker.lower()}.us"
+
+        history = download_stooq_data(s_symbol)
         if history:
-            market_data[ticker] = history
+            if market_type == 'it':
+                clean_key = ticker.upper().replace('.IT', '.MI')
+            else:
+                clean_key = ticker.upper()
+            market_data[clean_key] = history
         
-        time.sleep(0.03)
+        time.sleep(0.01)
+
+    it_years_list = []
+    us_years_list = []
+
+    for sym, hist in market_data.items():
+        if not hist:
+            continue
+        dates = sorted(hist.keys())
+        if len(dates) >= 2:
+            try:
+                d_start = datetime.strptime(dates[0], '%Y-%m-%d')
+                d_end = datetime.strptime(dates[-1], '%Y-%m-%d')
+                years = (d_end - d_start).days / 365.25
+                if sym.endswith('.MI'):
+                    it_years_list.append(years)
+                else:
+                    us_years_list.append(years)
+            except Exception:
+                pass
 
     it_count = sum(1 for sym in market_data if sym.endswith('.MI'))
     us_count = len(market_data) - it_count
     
-    it_avg_years = 2.0
-    us_avg_years = 2.0
+    it_avg_years = round(sum(it_years_list) / len(it_years_list), 1) if it_years_list else 0.0
+    us_avg_years = round(sum(us_years_list) / len(us_years_list), 1) if us_years_list else 0.0
 
     try:
         with open(DB_FILE, 'w', encoding='utf-8') as f:
