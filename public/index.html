@@ -7,12 +7,13 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; color: #333; }
         h1 { color: #2c3e50; }
+        h3 { color: #34495e; border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-top: 25px; }
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
         label { display: block; margin-top: 10px; font-weight: bold; }
         select, input, button { padding: 8px; margin-top: 5px; width: 100%; max-width: 300px; box-sizing: border-box; }
         button { background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 15px; }
         button:hover { background-color: #2980b9; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; margin-bottom: 20px; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
         th { background-color: #2c3e50; color: white; }
         tr:nth-child(even) { background-color: #f9f9f9; }
@@ -34,11 +35,12 @@
         </div>
     </div>
 
-    <!-- Sezione Filtri e Risultati -->
+    <!-- Sezione Filtri e Ricerca -->
     <div class="card">
         <h2>2. Filtri e Ricerca</h2>
         <label for="market">Mercato:</label>
         <select id="market">
+            <option value="ALL">Tutti i mercati</option>
             <option value="IT">Italia (IT)</option>
             <option value="US">Stati Uniti (US)</option>
         </select>
@@ -62,10 +64,13 @@
         <button onclick="caricaRisultati()">Restituisci risultati</button>
     </div>
 
-    <!-- Tabella Risultati -->
+    <!-- Sezione Risultati Divisa in Due Sezioni -->
     <div class="card">
-        <h2>Risultati</h2>
-        <table id="results-table">
+        <h2>Risultati per Sezione</h2>
+
+        <!-- Sezione Azioni Italiane -->
+        <h3>🇮🇹 Azioni Italiane</h3>
+        <table id="table-it">
             <thead>
                 <tr>
                     <th>Ticker</th>
@@ -77,16 +82,32 @@
                     <th>Link</th>
                 </tr>
             </thead>
-            <tbody id="table-body">
+            <tbody id="body-it">
+                <tr><td colspan="7">Nessun dato caricato.</td></tr>
+            </tbody>
+        </table>
+
+        <!-- Sezione Azioni Americane -->
+        <h3>🇺🇸 Azioni Americane</h3>
+        <table id="table-us">
+            <thead>
                 <tr>
-                    <td colspan="7">Nessun dato caricato. Usa i filtri sopra per cercare.</td>
+                    <th>Ticker</th>
+                    <th>Prezzo</th>
+                    <th>Var. Periodo (%)</th>
+                    <th>Var. Giornaliera (%)</th>
+                    <th>Mediana / Media (%)</th>
+                    <th>Dev. Std / Media (%)</th>
+                    <th>Link</th>
                 </tr>
+            </thead>
+            <tbody id="body-us">
+                <tr><td colspan="7">Nessun dato caricato.</td></tr>
             </tbody>
         </table>
     </div>
 
     <script>
-        // Funzione per avviare il download/aggiornamento dei dati
         function avviaAggiornamento() {
             const btn = document.getElementById('btn-update');
             const container = document.getElementById('progress-container');
@@ -96,7 +117,6 @@
             fetch('/api/update-market', { method: 'POST' })
                 .then(res => res.json())
                 .then(data => {
-                    console.log(data.message);
                     controllaProgresso();
                 })
                 .catch(err => {
@@ -106,7 +126,6 @@
                 });
         }
 
-        // Funzione di polling per tracciare la barra di progressione
         function controllaProgresso() {
             const interval = setInterval(() => {
                 fetch('/api/progress')
@@ -131,47 +150,87 @@
             }, 1500);
         }
 
-        // Funzione per inviare i parametri e popolare la tabella dei risultati
         function caricaRisultati() {
             const market = document.getElementById('market').value;
             const timeframe = document.getElementById('timeframe').value;
             const median = parseFloat(document.getElementById('median').value) || 0;
             const std = parseFloat(document.getElementById('std').value) || 0;
 
-            const tableBody = document.getElementById('table-body');
-            tableBody.innerHTML = `<tr><td colspan="7">Caricamento in corso...</td></tr>`;
+            const bodyIt = document.getElementById('body-it');
+            const bodyUs = document.getElementById('body-us');
+
+            bodyIt.innerHTML = `<tr><td colspan="7">Caricamento in corso...</td></tr>`;
+            bodyUs.innerHTML = `<tr><td colspan="7">Caricamento in corso...</td></tr>`;
+
+            // Se l'utente seleziona un mercato specifico o "ALL"
+            const queryMarket = market === 'ALL' ? 'ALL' : market;
 
             fetch('/api/get-results', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ market, timeframe, median, std })
+                body: JSON.stringify({ market: queryMarket, timeframe, median, std })
             })
             .then(res => res.json())
             .then(data => {
-                tableBody.innerHTML = '';
+                bodyIt.innerHTML = '';
+                bodyUs.innerHTML = '';
 
                 if (!data || data.length === 0) {
-                    tableBody.innerHTML = `<tr><td colspan="7">Nessun risultato trovato con i filtri selezionati.</td></tr>`;
+                    bodyIt.innerHTML = `<tr><td colspan="7">Nessun risultato trovato.</td></tr>`;
+                    bodyUs.innerHTML = `<tr><td colspan="7">Nessun risultato trovato.</td></tr>`;
                     return;
                 }
 
-                // Mappatura corretta dei campi e popolamento della tabella
+                // Separa i dati tra italiani (.MI o .AS) e americani
+                let itData = [];
+                let usData = [];
+
                 data.forEach(item => {
-                    const row = `<tr>
-                        <td><strong>${item.ticker}</strong></td>
-                        <td>${item.prezzo}</td>
-                        <td>${item.perf1}%</td>
-                        <td>${item.perf2}%</td>
-                        <td>${item.perf3}%</td>
-                        <td>${item.perf4}%</td>
-                        <td><a href="${item.url}" target="_blank">Apri</a></td>
-                    </tr>`;
-                    tableBody.innerHTML += row;
+                    if (item.ticker.endsWith('.MI') || item.ticker.endsWith('.AS')) {
+                        itData.push(item);
+                    } else {
+                        usData.push(item);
+                    }
                 });
+
+                // Popola la tabella Italiana
+                if (itData.length === 0) {
+                    bodyIt.innerHTML = `<tr><td colspan="7">Nessuna azione italiana trovata con i filtri correnti.</td></tr>`;
+                } else {
+                    itData.forEach(item => {
+                        bodyIt.innerHTML += `<tr>
+                            <td><strong>${item.ticker}</strong></td>
+                            <td>${item.prezzo}</td>
+                            <td>${item.perf1}%</td>
+                            <td>${item.perf2}%</td>
+                            <td>${item.perf3}%</td>
+                            <td>${item.perf4}%</td>
+                            <td><a href="${item.url}" target="_blank">Apri</a></td>
+                        </tr>`;
+                    });
+                }
+
+                // Popola la tabella Americana
+                if (usData.length === 0) {
+                    bodyUs.innerHTML = `<tr><td colspan="7">Nessuna azione americana trovata con i filtri correnti.</td></tr>`;
+                } else {
+                    usData.forEach(item => {
+                        bodyUs.innerHTML += `<tr>
+                            <td><strong>${item.ticker}</strong></td>
+                            <td>${item.prezzo}</td>
+                            <td>${item.perf1}%</td>
+                            <td>${item.perf2}%</td>
+                            <td>${item.perf3}%</td>
+                            <td>${item.perf4}%</td>
+                            <td><a href="${item.url}" target="_blank">Apri</a></td>
+                        </tr>`;
+                    });
+                }
             })
             .catch(err => {
                 console.error("Errore nel recupero dei risultati:", err);
-                tableBody.innerHTML = `<tr><td colspan="7">Errore durante il caricamento dei dati.</td></tr>`;
+                bodyIt.innerHTML = `<tr><td colspan="7">Errore di caricamento.</td></tr>`;
+                bodyUs.innerHTML = `<tr><td colspan="7">Errore di caricamento.</td></tr>`;
             });
         }
     </script>
