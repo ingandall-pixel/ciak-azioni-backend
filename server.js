@@ -4,66 +4,66 @@ const path = require('path');
 const fs = require('fs');
 const app = express();
 
-// --- CONFIGURAZIONI BASE ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- ROTTA PRINCIPALE ---
-// Carica l'interfaccia grafica (la tua Home con il titolo "CIAK! - AZIONI 🖕")
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// --- ROTTA PROGRESSO ---
-// Il frontend chiama questa rotta ogni secondo per far muovere la barra di caricamento
+// Rotta per leggere lo stato della barra di avanzamento
 app.get('/api/progress', (req, res) => {
     try {
-        // Legge lo stato dal file aggiornato dallo script Python
         const progressData = fs.readFileSync('progress.json', 'utf8');
         res.json(JSON.parse(progressData));
     } catch (err) {
-        // Se il file non esiste ancora, restituisce 0%
-        res.json({ percent: 0, status: "Avvio in corso..." });
+        res.json({ percent: 0, status: "Pronto per l'avvio..." });
     }
 });
 
-// --- ROTTA AVVIO ANALISI ---
-// Si attiva quando clicchi "Avvia analisi" o quando parte l'automazione notturna
+// Rotta per scaricare il file di log in caso di errore
+app.get('/api/download-log', (req, res) => {
+    const logPath = path.join(__dirname, 'error_log.txt');
+    if (fs.existsSync(logPath)) {
+        res.download(logPath);
+    } else {
+        res.status(404).send("Nessun file di log trovato. Nessun errore registrato.");
+    }
+});
+
+// Avvia l'analisi / aggiornamento database
 app.post('/api/run-analysis', (req, res) => {
-    console.log("Ricevuto comando: Inizio costruzione/aggiornamento Database...");
+    console.log("Ricevuto comando: Inizio elaborazione database...");
     
-    // 1. Inizializza/Resetta il file di progresso a 0
-    fs.writeFileSync('progress.json', JSON.stringify({ percent: 0, status: "Inizializzazione script Python..." }));
+    fs.writeFileSync('progress.json', JSON.stringify({ percent: 0, status: "Inizializzazione script..." }));
     
-    // 2. Lancia lo script di aggiornamento Intelligente (update_db.py)
+    // Pulisci il vecchio log errori se esiste
+    if (fs.existsSync('error_log.txt')) {
+        fs.unlinkSync('error_log.txt');
+    }
+
     const pythonProcess = spawn('python3', ['update_db.py']);
     
-    // 3. Risponde SUBITO al frontend. 
-    // In questo modo il browser non rimane in caricamento per minuti, ma fa partire la barra.
-    res.json({ success: true, message: "Processo avviato in background." });
+    res.json({ success: true, message: "Processo avviato." });
 
-    // 4. Gestione della chiusura del processo Python (Vero completamento o Crash)
     pythonProcess.on('close', (code) => {
         console.log(`Script Python terminato con codice ${code}`);
         if (code === 0) {
-            // Se finisce con codice 0, significa che è andato tutto perfettamente
             fs.writeFileSync('progress.json', JSON.stringify({ percent: 100, status: "Completato!" }));
         } else {
-            // Se finisce con qualsiasi altro codice, è crashato!
-            fs.writeFileSync('progress.json', JSON.stringify({ percent: 100, status: "Errore! Guarda i log di Render" }));
+            fs.writeFileSync('progress.json', JSON.stringify({ percent: 100, status: "Errore durante il processo! Scarica il log." }));
         }
     });
 
-    // Registra gli errori di Python direttamente nei log di Render per facilitare il debug
     pythonProcess.stderr.on('data', (data) => {
-        console.error(`ERRORE PYTHON: ${data.toString()}`);
+        const errMessage = data.toString();
+        console.error(`ERRORE PYTHON: ${errMessage}`);
+        fs.appendFileSync('error_log.txt', `${new Date().toISOString()} - ${errMessage}\n`);
     });
 });
 
-// --- AVVIO DEL SERVER ---
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server attivo e in ascolto sulla porta ${PORT}`);
-    console.log(`Pronto per gestire l'analisi del mercato Italiano e Americano.`);
+    console.log(`Server attivo sulla porta ${PORT}`);
 });
