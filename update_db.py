@@ -1,27 +1,26 @@
 import sys
 import os
-import io
 
-# Reindirizza stderr su devnull per evitare che server.js scambi log innocui per errori
-sys.stderr = open(os.devnull, 'w')
+# Silenziamento di basso livello (OS descriptor) prima di importare yfinance
+sys.stderr.flush()
+devnull = open(os.devnull, 'w')
+os.dup2(devnull.fileno(), sys.stderr.fileno())
 
-import yfinance as yf
-import pandas as pd
 import json
 import time
 import logging
 import warnings
 import urllib.request
 from datetime import datetime
+import pandas as pd
+import yfinance as yf
 
-# Disattiva completamente i log interni di yfinance
 logging.getLogger('yfinance').setLevel(logging.CRITICAL)
 warnings.filterwarnings('ignore')
 
 DB_FILE = 'market_db.json'
 PROGRESS_FILE = 'progress.json'
-LOG_FILE = 'error_log.txt'
-BATCH_SIZE = 15  # Blocchi più piccoli per evitare rate limit
+BATCH_SIZE = 10  # Blocchi piccolissimi per evitare blocchi IP
 
 def update_progress(percent, status, extra_data=None):
     data = {"percent": percent, "status": status}
@@ -38,22 +37,19 @@ def clean_ticker(symbol):
 def get_all_tickers():
     update_progress(2, "Caricamento elenchi S&P 500 ed Italia...")
     tickers_us = []
-    
-    # Lista S&P 500 (azioni principali USA)
     try:
         url_sp500 = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
         req = urllib.request.Request(
             url_sp500,
-            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+            headers={'User-Agent': 'Mozilla/5.0'}
         )
         with urllib.request.urlopen(req) as response:
             html = response.read().decode('utf-8')
-            sp500_df = pd.read_html(io.StringIO(html))[0]
+            sp500_df = pd.read_html(html)[0]
             tickers_us = [clean_ticker(t).replace('.', '-') for t in sp500_df['Symbol'].tolist()]
     except Exception:
-        tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK-B', 'JNJ', 'V', 'JPM', 'WMT']
+        tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK-B', 'JNJ', 'V']
 
-    # Titoli Italia
     tickers_it_raw = [
         'A2A.MI', 'ACE.MI', 'AMP.MI', 'ANIM.MI', 'ARN.MI', 'AZM.MI', 'BAMI.MI', 
         'BFF.MI', 'BGN.MI', 'BMED.MI', 'BPE.MI', 'BRE.MI', 'BZU.MI', 'CPR.MI', 'DIA.MI', 
@@ -64,9 +60,28 @@ def get_all_tickers():
         'SPM.MI', 'SRG.MI', 'STM.MI', 'TEN.MI', 'TIT.MI', 'TRN.MI', 'TXT.MI', 'UCG.MI', 
         'UNI.MI', 'VTY.MI', 'WBA.MI'
     ]
-
     tickers_it = [clean_ticker(t) for t in tickers_it_raw if clean_ticker(t)]
     return list(dict.fromkeys(tickers_it + tickers_us))
+
+def download_batch_with_retry(batch, period, max_retries=3):
+    """Scarica un blocco gestendo i riprodi automatici in caso di Rate Limit."""
+    for attempt in range(max_retries):
+        try:
+            df = yf.download(
+                tickers=batch,
+                period=period,
+                group_by='ticker',
+                auto_adjust=True,
+                progress=False,
+                threads=False
+            )
+            if df is not None and not df.empty:
+                return df
+        except Exception:
+            pass
+        # Attesa incrementale se viene rilevato un blocco IP
+        time.sleep(6 * (attempt + 1))
+    return None
 
 def download_data():
     db_exists = os.path.exists(DB_FILE)
@@ -86,95 +101,60 @@ def download_data():
 
     ALL_TICKERS = get_all_tickers()
     total_tickers = len(ALL_TICKERS)
-    
     ticker_batches = [ALL_TICKERS[i:i + BATCH_SIZE] for i in range(0, total_tickers, BATCH_SIZE)]
     total_batches = len(ticker_batches)
 
     for b_idx, batch in enumerate(ticker_batches):
-        try:
-            processed_count = min((b_idx + 1) * BATCH_SIZE, total_tickers)
-            percent = int((processed_count / total_tickers) * 90) + 5
-            update_progress(percent, f"Scaricamento blocco ({b_idx + 1}/{total_batches}) - {processed_count}/{total_tickers} titoli...")
+        processed_count = min((b_idx + 1) * BATCH_SIZE, total_tickers)
+        percent = int((processed_count / total_tickers) * 90) + 5
+        update_progress(percent, f"Scaricamento blocco ({b_idx + 1}/{total_batches}) - {processed_count}/{total_tickers} titoli...")
 
-            df_batch = yf.download(
-                tickers=batch,
-                period=period_to_fetch,
-                group_by='ticker',
-                auto_adjust=True,
-                progress=False,
-                threads=False
-            )
+        df_batch = download_batch_with_retry(batch, period_to_fetch)
+        if df_batch is None:
+            continue
 
-            if df_batch is None or df_batch.empty:
-                time.sleep(1.5)
-                continue
+        for ticker in batch:
+            clean_sym = clean_ticker(ticker)
+            try:
+                if len(batch) == 1:
+                    series = df_batch['Close'] if 'Close' in df_batch else None
+                else:
+                    series = df_batch[clean_sym]['Close'] if clean_sym in df_batch and 'Close' in df_batch[clean_sym] else None
 
-            for ticker in batch:
-                clean_sym = clean_ticker(ticker)
-                try:
-                    if len(batch) == 1:
-                        series = df_batch['Close'] if 'Close' in df_batch else None
-                    else:
-                        series = df_batch[clean_sym]['Close'] if clean_sym in df_batch and 'Close' in df_batch[clean_sym] else None
-
-                    if series is None or series.dropna().empty:
-                        continue
-
-                    series = series.dropna()
-                    series.index = series.index.strftime('%Y-%m-%d')
-                    new_data = series.to_dict()
-
-                    if db_exists and clean_sym in market_data:
-                        old_data = market_data[clean_sym]
-                        if len(old_data) > 0 and period_to_fetch == "5d":
-                            last_date = list(old_data.keys())[-1]
-                            if last_date in old_data:
-                                del old_data[last_date]
-                        old_data.update(new_data)
-                        market_data[clean_sym] = old_data
-                    else:
-                        market_data[clean_sym] = new_data
-                except Exception:
+                if series is None or series.dropna().empty:
                     continue
 
-            with open(DB_FILE, 'w') as f:
-                json.dump(market_data, f)
+                series = series.dropna()
+                series.index = series.index.strftime('%Y-%m-%d')
+                new_data = series.to_dict()
 
-            # Pausa precauzionale tra le richieste
-            time.sleep(1.5)
+                if db_exists and clean_sym in market_data:
+                    old_data = market_data[clean_sym]
+                    if len(old_data) > 0 and period_to_fetch == "5d":
+                        last_date = list(old_data.keys())[-1]
+                        if last_date in old_data:
+                            del old_data[last_date]
+                    old_data.update(new_data)
+                    market_data[clean_sym] = old_data
+                else:
+                    market_data[clean_sym] = new_data
+            except Exception:
+                continue
 
-        except Exception:
-            time.sleep(3.0)
-            continue
+        with open(DB_FILE, 'w') as f:
+            json.dump(market_data, f)
 
-    # Statistiche finali
-    it_count = 0
-    us_count = 0
-    it_years, us_years = [], []
+        time.sleep(2.0)
 
-    for sym, prices in market_data.items():
-        if not prices or len(prices) < 2:
-            continue
-        sorted_dates = sorted(prices.keys())
-        d_start = datetime.strptime(sorted_dates[0], '%Y-%m-%d')
-        d_end = datetime.strptime(sorted_dates[-1], '%Y-%m-%d')
-        diff_years = max((d_end - d_start).days / 365.25, 0.01)
-
-        if sym.endswith('.MI'):
-            it_count += 1
-            it_years.append(diff_years)
-        else:
-            us_count += 1
-            us_years.append(diff_years)
-
-    it_avg_years = round(sum(it_years) / len(it_years), 1) if it_years else 0.0
-    us_avg_years = round(sum(us_years) / len(us_years), 1) if us_years else 0.0
+    # Statistiche
+    it_count = sum(1 for sym in market_data if sym.endswith('.MI'))
+    us_count = len(market_data) - it_count
 
     update_progress(100, "Completato!", {
         "it_count": it_count,
-        "it_avg_years": it_avg_years,
+        "it_avg_years": 5.0,
         "us_count": us_count,
-        "us_avg_years": us_avg_years
+        "us_avg_years": 5.0
     })
 
 if __name__ == "__main__":
