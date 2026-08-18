@@ -1,80 +1,55 @@
 const express = require('express');
 const cors = require('cors');
 const { spawn } = require('child_process');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static('public'));
 
-// Endpoint per avviare l'aggiornamento del database
-app.get('/api/update-db', (req, res) => {
-    const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
-    const pythonProcess = spawn(pythonCmd, ['update_db.py']);
-    
-    let stderrOutput = '';
-    pythonProcess.stderr.on('data', (data) => {
-        stderrOutput += data.toString();
-    });
+const PROGRESS_FILE = path.join(__dirname, 'progress.json');
 
-    pythonProcess.on('close', (code) => {
-        if (code === 0) {
-            res.json({ success: true, message: 'Database aggiornato con successo.' });
-        } else {
-            res.status(500).json({ success: false, message: 'Errore durante l\'aggiornamento del DB', error: stderrOutput });
-        }
-    });
+app.post('/api/run-download', (req, res) => {
+    const pythonProcess = spawn('python', ['analyzer.py', 'download']);
+    pythonProcess.unref();
+    res.json({ status: "started" });
 });
 
-// Endpoint per avviare l'analisi completa dei dati
+app.get('/api/progress', (req, res) => {
+    if (fs.existsSync(PROGRESS_FILE)) {
+        try {
+            const data = fs.readFileSync(PROGRESS_FILE, 'utf-8');
+            return res.json(JSON.parse(data));
+        } catch (e) {
+            return res.json({ percent: 0, status: "Errore di lettura" });
+        }
+    }
+    res.json({ percent: 0, status: "In attesa..." });
+});
+
 app.get('/api/analyze', (req, res) => {
-    const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
-    const pythonProcess = spawn(pythonCmd, ['analyzer.py']);
+    const { market, tf, median_markup, std_ratio } = req.query;
     
+    const py = spawn('python', ['analyzer.py', market || 'IT', tf || '1m', median_markup || '1', std_ratio || '1']);
     let output = '';
-    let stderrOutput = '';
-    
-    pythonProcess.stdout.on('data', (data) => {
+
+    py.stdout.on('data', (data) => {
         output += data.toString();
     });
 
-    pythonProcess.stderr.on('data', (data) => {
-        stderrOutput += data.toString();
-    });
-
-    pythonProcess.on('close', (code) => {
-        if (code === 0) {
-            try {
-                const results = JSON.parse(output);
-                res.json({ success: true, data: results });
-            } catch (e) {
-                res.status(500).json({ success: false, message: 'Errore di parsing JSON dall\'analisi', raw: output });
-            }
-        } else {
-            res.status(500).json({ success: false, message: 'Errore durante l\'esecuzione dell\'analisi', error: stderrOutput });
-        }
-    });
-});
-
-// Endpoint per monitorare lo stato di avanzamento in tempo reale
-app.get('/api/progress', (req, res) => {
-    const progressPath = path.join(__dirname, 'progress.json');
-    if (fs.existsSync(progressPath)) {
+    py.on('close', () => {
         try {
-            const data = fs.readFileSync(progressPath, 'utf8');
-            res.json(JSON.parse(data));
+            const parsed = JSON.parse(output);
+            res.json(parsed);
         } catch (e) {
-            res.json({ percent: 0, status: 'Lettura progresso in corso...' });
+            res.json([]);
         }
-    } else {
-        res.json({ percent: 0, status: 'In attesa dell\'avvio' });
-    }
+    });
 });
 
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server Node.js avviato sulla porta ${PORT}`);
+    console.log(`Server attivo sulla porta ${PORT}`);
 });
