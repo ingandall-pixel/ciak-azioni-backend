@@ -15,7 +15,6 @@ def calculate_screening(market, period, median_markup, std_markup, sort_by, sort
 
     results = []
     
-    # Filtro mercati in base al suffisso del ticker (.MI per Italia, altro per USA)
     for symbol, prices_dict in market_data.items():
         is_it = symbol.endswith('.MI')
         if market == 'it' and not is_it:
@@ -35,7 +34,6 @@ def calculate_screening(market, period, median_markup, std_markup, sort_by, sort
         if df.empty:
             continue
 
-        # Taglio in base al periodo selezionato
         now = df.index.max()
         if period == '1d':
             start_date = now - pd.Timedelta(days=1)
@@ -45,12 +43,12 @@ def calculate_screening(market, period, median_markup, std_markup, sort_by, sort
             start_date = now - pd.Timedelta(days=30)
         elif period == '1y':
             start_date = now - pd.Timedelta(days=365)
-        else: # 5y
+        else:
             start_date = now - pd.Timedelta(days=365 * 5)
 
         df_period = df[df.index >= start_date]
         if len(df_period) < 2:
-            df_period = df # Fallback all'intero storico disponibile se il periodo è troppo corto
+            df_period = df
 
         prices = df_period['Close']
         current_price = float(prices.iloc[-1])
@@ -58,13 +56,11 @@ def calculate_screening(market, period, median_markup, std_markup, sort_by, sort
         
         period_change = ((current_price - start_price) / start_price) * 100 if start_price > 0 else 0.0
         
-        # Variazione giornaliera (oggi rispetto a ieri)
         daily_change = 0.0
         if len(prices) >= 2:
             prev_price = float(prices.iloc[-2])
             daily_change = ((current_price - prev_price) / prev_price) * 100 if prev_price > 0 else 0.0
 
-        # Calcoli Mediana e Deviazione Standard rapportate alla Media
         mean_val = prices.mean()
         median_val = prices.median()
         std_val = prices.std()
@@ -72,7 +68,6 @@ def calculate_screening(market, period, median_markup, std_markup, sort_by, sort
         median_media_ratio = (median_val / mean_val * 100) if mean_val > 0 else 0.0
         std_media_ratio = (std_val / mean_val * 100) if mean_val > 0 else 0.0
 
-        # Filtro markup
         if median_media_ratio >= float(median_markup) and std_media_ratio >= float(std_markup):
             results.append({
                 "name": symbol,
@@ -84,7 +79,6 @@ def calculate_screening(market, period, median_markup, std_markup, sort_by, sort
                 "std_media_ratio": round(std_media_ratio, 2)
             })
 
-    # Ordinamento
     reverse_order = (sort_order == 'desc')
     if sort_by == 'perf':
         results.sort(key=lambda x: x['period_change'], reverse=reverse_order)
