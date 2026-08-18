@@ -1,26 +1,14 @@
-import sys
 import os
 import json
 import time
-import logging
-import warnings
 import urllib.request
-import yfinance as yf
+import pandas as pd
+import io
 from datetime import datetime
-
-# Soppressione totale dei log di errore superflui
-sys.stderr.flush()
-devnull = open(os.devnull, 'w')
-os.dup2(devnull.fileno(), sys.stderr.fileno())
-logging.getLogger('yfinance').setLevel(logging.CRITICAL)
-warnings.filterwarnings('ignore')
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = os.path.join(BASE_DIR, 'market_db.json')
 PROGRESS_FILE = os.path.join(BASE_DIR, 'progress.json')
-
-# Batch ottimizzato a 5 per evitare i blocchi di Rate Limit pur mantenendo tutte le azioni
-BATCH_SIZE = 5
 
 def update_progress(percent, status, extra_data=None):
     data = {"percent": percent, "status": status}
@@ -79,6 +67,29 @@ def get_all_tickers():
 
     return list(dict.fromkeys(tickers_it + tickers_us))
 
+def download_stooq_data(symbol):
+    # Converte il simbolo per l'interrogazione pulita su Stooq
+    if symbol.endswith('.MI'):
+        stooq_symbol = symbol.replace('.MI', '.it').lower()
+    else:
+        stooq_symbol = f"{symbol.lower()}.us"
+        
+    url = f"https://stooq.com/q/d/l/?s={stooq_symbol}&i=d"
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    try:
+        with urllib.request.urlopen(req, timeout=6) as response:
+            df = pd.read_csv(io.StringIO(response.read().decode('utf-8')))
+            if 'Date' in df.columns and 'Close' in df.columns:
+                df = df.dropna(subset=['Close'])
+                df['Close'] = pd.to_numeric(df['Close'], errors='coerce')
+                df = df.dropna(subset=['Close'])
+                if not df.empty:
+                    df['Date'] = pd.to_datetime(df['Date']).dt.strftime('%Y-%m-%d')
+                    return dict(zip(df['Date'], df['Close']))
+    except Exception:
+        pass
+    return None
+
 def download_data():
     market_data = {}
     if os.path.exists(DB_FILE):
@@ -91,63 +102,28 @@ def download_data():
     tickers = get_all_tickers()
     total = len(tickers)
 
-    for i in range(0, total, BATCH_SIZE):
-        batch = tickers[i:i + BATCH_SIZE]
-        percent = int((i / total) * 90) + 5
-        update_progress(percent, f"Scaricamento blocco ({i}/{total}) - Elaborazione in corso...")
+    for idx, ticker in enumerate(tickers):
+        percent = int((idx / total) * 90) + 5
+        if idx % 50 == 0:
+            update_progress(percent, f"Scaricamento ({idx}/{total}) tramite API ufficiali...")
 
-        success = False
-        retries = 3
-        while retries > 0 and not success:
-            try:
-                data = yf.download(
-                    batch,
-                    period="2y",
-                    group_by='ticker',
-                    auto_adjust=True,
-                    progress=False,
-                    threads=False
-                )
+        history = download_stooq_data(ticker)
+        if history:
+            market_data[ticker] = history
+        
+        time.sleep(0.03) # Pausa minima e sicura per la stabilità della connessione
 
-                for ticker in batch:
-                    try:
-                        if len(batch) == 1:
-                            df = data
-                        else:
-                            df = data[ticker] if ticker in data else None
-
-                        if df is not None and not df.empty and 'Close' in df:
-                            series = df['Close'].dropna()
-                            if not series.empty:
-                                series.index = series.index.strftime('%Y-%m-%d')
-                                market_data[ticker] = series.apply(lambda x: float(x)).to_dict()
-                    except Exception:
-                        continue
-                success = True
-            except Exception as e:
-                retries -= 1
-                err_msg = str(e)
-                if "Too Many Requests" in err_msg or "Rate limited" in err_msg:
-                    time.sleep(20.0)  # Pausa lunga se Yahoo blocca temporaneamente l'IP
-                else:
-                    time.sleep(3.0)
-
-        time.sleep(1.2) # Pausa regolare tra un batch e l'altro per rispetto delle API
-
-    # Definizione rigorosa delle variabili per evitare qualsiasi NameError finale
     it_count = sum(1 for sym in market_data if sym.endswith('.MI'))
     us_count = len(market_data) - it_count
     it_avg_years = 2.0
     us_avg_years = 2.0
 
-    # Scrittura sicura su file del database
     try:
         with open(DB_FILE, 'w', encoding='utf-8') as f:
             json.dump(market_data, f, indent=2)
     except Exception:
         pass
 
-    # Completamento ufficiale al 100%
     update_progress(100, "Completato!", {
         "it_count": it_count,
         "it_avg_years": it_avg_years,
