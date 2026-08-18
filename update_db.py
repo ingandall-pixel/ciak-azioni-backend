@@ -41,7 +41,6 @@ def get_all_tickers():
     except Exception:
         tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA']
 
-    # Lista completa ed estesa di azioni italiane su Borsa Italiana / Stooq
     tickers_it = [
         'enel.it', 'eni.it', 'isp.it', 'ucg.it', 'stm.it', 'generali.it', 
         'ferrari.it', 'stellantis.it', 'leonardo.it', 'snam.it', 'terna.it', 
@@ -69,8 +68,8 @@ def get_all_tickers():
         'datalogic.it', 'esprinet.it', 'ferretti.it', 'gabetti.it', 'immsi.it', 
         'interpump.it', 'italmobiliare.it', 'mediobanca.it', 'monrif.it', 
         'pininfarina.it', 'piaggio.it', 'portobello.it', 'prima.it', 'snai.it', 
-        'tas.it', 'unipol.it', 'valsoia.it', 'amplifon.it', 'azimut.it', 
-        'BFF Bank.it', 'Buzzi Unicem.it', 'Davide Campari-Milano.it', 'De'Longhi.it', 
+        'tas.it', 'valsoia.it', 'amplifon.it', 'azimut.it', 
+        'BFF Bank.it', 'Buzzi Unicem.it', 'Davide Campari-Milano.it', "De'Longhi.it", 
         'ERG.it', 'FinecoBank.it', 'Hera.it', 'Inwit.it', 'Italgas.it', 
         'Leonardo.it', 'Mediobanca.it', 'Moncler.it', 'Nexi.it', 'Pirelli & C.it', 
         'Poste Italiane.it', 'Prysmian.it', 'Recordati.it', 'Snam.it', 
@@ -84,10 +83,8 @@ def download_stooq_data(symbol):
     url = f"https://stooq.com/q/d/l/?s={symbol}&i=d"
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
     try:
-        # Timeout impostato a 5 secondi per evitare blocchi permanenti su ticker morti/delisted
         with urllib.request.urlopen(req, timeout=5) as response:
             content = response.read().decode('utf-8')
-            # Se Stooq risponde con errore o file vuoto/delisted
             if 'Exceeded' in content or '<html' in content.lower():
                 return None
             df = pd.read_csv(io.StringIO(content))
@@ -127,7 +124,6 @@ def download_data():
             clean_key = ticker.upper().replace('.IT', '.MI') if market_type == 'it' else ticker.upper()
             market_data[clean_key] = history
         
-        # Ritardo di sicurezza aumentato a 0.15s per evitare il ban dell'IP da parte di Stooq
         time.sleep(0.15)
 
     it_years_list = []
