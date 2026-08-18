@@ -27,10 +27,9 @@
             </div>
         </div>
 
-        <!-- Controlli: Periodo e Sliders -->
+        <!-- Controlli: Periodo -->
         <div class="card shadow-sm p-3 mb-4">
             <div class="row align-items-center">
-                <!-- Selettore Periodo Completo -->
                 <div class="col-md-4 mb-3 mb-md-0">
                     <label for="select-periodo" class="form-label fw-bold">Periodo:</label>
                     <select id="select-periodo" class="form-select">
@@ -65,7 +64,6 @@
 
     <!-- Script JavaScript Completo -->
     <script>
-        // Mappatura dei giorni di borsa (sessioni) per ciascun periodo selezionato
         const periodiOffset = {
             '1d': 1,
             '1w': 5,
@@ -75,9 +73,8 @@
         };
 
         let globalMarketData = {};
-        let currentMarket = 'IT'; // 'IT' o 'US'
+        let currentMarket = 'IT';
 
-        // Funzione per calcolare la variazione percentuale in base al periodo scelto
         function calcolaVariazione(storicoPrezzi, periodoSelezionato) {
             const dateKeys = Object.keys(storicoPrezzi).sort();
             if (dateKeys.length < 2) return 0;
@@ -93,7 +90,6 @@
             return ((prezzoFine - prezzoInizio) / prezzoInizio) * 100;
         }
 
-        // Funzione per aggiornare la tabella in-page
         function renderTable() {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
@@ -101,7 +97,6 @@
             const periodoScelto = document.getElementById('select-periodo').value;
 
             for (const [ticker, storico] of Object.entries(globalMarketData)) {
-                // Filtra in base al mercato selezionato (CORRETTO con endsWith)
                 const isIt = ticker.endsWith('.MI') || ticker.endsWith('.AS') || !/^[A-Z\-]+$/.test(ticker);
                 if (currentMarket === 'IT' && !isIt) continue;
                 if (currentMarket === 'US' && isIt) continue;
@@ -124,7 +119,6 @@
             }
         }
 
-        // Event Listeners per i pulsanti di mercato
         document.getElementById('btn-it').addEventListener('click', () => {
             currentMarket = 'IT';
             document.getElementById('btn-it').className = 'btn btn-primary me-2';
@@ -139,16 +133,14 @@
             renderTable();
         });
 
-        // Event Listener per il cambio del periodo nel menu a tendina
         document.getElementById('select-periodo').addEventListener('change', () => {
             renderTable();
         });
 
-        // Caricamento iniziale dei dati dal file JSON del database
         async function init() {
             try {
-                const response = await fetch('market_db.json');
-                if (!response.ok) throw new Error("Impossibile caricare market_db.json");
+                const response = await fetch('/market_db.json');
+                if (!response.ok) throw new Error("File market_db.json non trovato dal server.");
                 globalMarketData = await response.json();
                 
                 document.getElementById('status-box').className = 'alert alert-success';
@@ -157,11 +149,10 @@
                 renderTable();
             } catch (error) {
                 document.getElementById('status-box').className = 'alert alert-danger';
-                document.getElementById('status-box').innerText = 'Errore nel caricamento dei dati di mercato: ' + error.message;
+                document.getElementById('status-box').innerText = 'Errore nel caricamento: ' + error.message;
             }
         }
 
-        // Avvio script al caricamento della pagina
         window.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
