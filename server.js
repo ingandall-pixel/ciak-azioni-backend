@@ -1,69 +1,95 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { spawn } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DB_FILE = path.join(__dirname, 'market_db.json');
 
-// Middleware per leggere il formato JSON e servire i file statici dalla cartella public
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 1. Rotta per l'aggiornamento incrementale (collegata a "Avvia analisi di mercato")
+// 1. Rotta per avviare l'analisi di mercato (collegata a "Avvia analisi di mercato")
 app.post('/api/update-market', (req, res) => {
-    if (!fs.existsSync(DB_FILE)) {
-        return res.status(404).json({ status: "error", message: "Database non trovato." });
-    }
+    // Esegue lo script Python "analyzer.py download" in background
+    const pyProcess = spawn('python', [path.join(__dirname, 'analyzer.py'), 'download']);
 
-    try {
-        // Qui puoi inserire o richiamare la logica di aggiornamento delle candele
-        // (es. leggendo market_db.json e aggiornando i dati)
-        
-        res.json({ status: "success", message: "Analisi di mercato e aggiornamento incrementale completati con successo!" });
-    } catch (error) {
-        res.status(500).json({ status: "error", message: "Errore durante l'aggiornamento del mercato." });
+    pyProcess.on('error', (err) => {
+        console.error("Errore nell'avvio del processo Python:", err);
+    });
+
+    res.json({ status: "success", message: "Analisi di mercato e aggiornamento dati avviati sul server!" });
+});
+
+// 2. Rotta per verificare lo stato dell'avanzamento (legge progress.json)
+app.get('/api/progress', (req, res) => {
+    const progressFile = path.join(__dirname, 'progress.json');
+    if (fs.existsSync(progressFile)) {
+        try {
+            const data = fs.readFileSync(progressFile, 'utf8');
+            res.json(JSON.parse(data));
+        } catch (e) {
+            res.json({ percent: 0, status: "Lettura in corso..." });
+        }
+    } else {
+        res.json({ percent: 0, status: "In attesa di avvio..." });
     }
 });
 
-// 2. Rotta per restituire i risultati filtrati (collegata a "Restituisci risultati")
+// 3. Rotta per restituire i risultati filtrati (collegata a "Restituisci risultati")
 app.post('/api/get-results', (req, res) => {
-    const { timeframe, median, std } = req.body;
+    const { market = 'IT', timeframe = '1m', median = 50, std = 10 } = req.body;
 
-    if (!fs.existsSync(DB_FILE)) {
-        return res.json([]);
-    }
+    // Esegue analyzer.py passando i parametri di filtro
+    const pyProcess = spawn('python', [
+        path.join(__dirname, 'analyzer.py'),
+        market,
+        timeframe,
+        median.toString(),
+        std.toString()
+    ]);
 
-    try {
-        const rawData = fs.readFileSync(DB_FILE, 'utf8');
-        const dbData = JSON.parse(rawData);
+    let dataString = '';
+    let errorString = '';
 
-        let risultatiFiltrati = [];
+    pyProcess.stdout.on('data', (chunk) => {
+        dataString += chunk;
+    });
 
-        for (const [ticker, data] of Object.entries(dbData)) {
-            // Genera il link diretto a Investing.com per il ticker
-            const investingUrl = `https://www.investing.com/search/?q=${ticker}`;
+    pyProcess.stderr.on('data', (chunk) => {
+        errorString += chunk;
+    });
 
-            risultatiFiltrati.push({
-                ticker: ticker,
-                url: investingUrl,
-                prezzo: data.prezzo || 0.0,
-                trend_img: data.trend_img || "",
-                perf1: data.perf1 || 0.0,
-                perf2: data.perf2 || 0.0,
-                perf3: data.perf3 || 0.0,
-                perf4: data.perf4 || 0.0
-            });
+    pyProcess.on('close', (code) => {
+        if (code !== 0) {
+            console.error(`Errore in analyzer.py: ${errorString}`);
+            return res.status(500).json([]);
         }
 
-        res.json(risultatiFiltrati);
-    } catch (error) {
-        console.error("Errore nella lettura del database:", error);
-        res.status(500).json([]);
-    }
+        try {
+            const results = JSON.parse(dataString);
+            
+            // Mappa i risultati aggiungendo il link dinamico a Investing.com per ciascun ticker
+            const formattedResults = results.map(item => ({
+                ticker: item.ticker,
+                url: `https://www.investing.com/search/?q=${item.ticker}`,
+                prezzo: item.price,
+                trend_img: "", // Può essere integrato con la generazione sparkline grafica
+                perf1: item.var_period,
+                perf2: item.var_daily,
+                perf3: item.med_mean_ratio,
+                perf4: item.std_mean_ratio
+            }));
+
+            res.json(formattedResults);
+        } catch (e) {
+            console.error("Errore nel parsing dell'output JSON:", e, dataString);
+            res.status(500).json([]);
+        }
+    });
 });
 
 // Avvio del server
 app.listen(PORT, () => {
-    console.log(`Server CIAK!-AZIONI in ascolto sulla porta ${PORT}`);
+    console.log(`Server CIAK!-AZIONI attivo sulla porta ${PORT}`);
 });
