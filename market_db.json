@@ -1,28 +1,10 @@
-async function loadMarketData() {
-    try {
-        // Assicurati che il percorso del file sia corretto rispetto al file HTML
-        const response = await fetch('./market_db.json');
-        
-        if (!response.ok) {
-            throw new Error(`Impossibile trovare il file (Stato: ${response.status})`);
-        }
-        
-        const data = await response.json();
-        console.log("Dati caricati correttamente:", data);
-        
-        // Esempio di chiamata alla funzione che popola la tabella con i dati
-        popolaTabella(data);
-        
-    } catch (error) {
-        console.error("Errore nel caricamento dei dati di mercato:", error.message);
-        
-        // Aggiornamento dell'interfaccia in caso di errore
-        const errorBox = document.getElementById('errore-box');
-        if (errorBox) {
-            errorBox.innerText = "Errore nel caricamento dei dati di mercato: Impossibile caricare market_db.json";
-        }
-    }
+{
+  "italiano": [
+    { "azione": "Enel", "prezzo": "6.85 €", "var_periodo": "+12.4%" },
+    { "azione": "Intesa Sanpaolo", "prezzo": "3.50 €", "var_periodo": "+8.1%" }
+  ],
+  "americano": [
+    { "azione": "Apple", "prezzo": "$180.50", "var_periodo": "+15.2%" },
+    { "azione": "Tesla", "prezzo": "$210.00", "var_periodo": "-3.4%" }
+  ]
 }
-
-// Avvia la funzione al caricamento della pagina
-window.addEventListener('DOMContentLoaded', loadMarketData);
