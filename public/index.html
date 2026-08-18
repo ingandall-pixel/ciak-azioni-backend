@@ -6,6 +6,10 @@
     <title>Ciak Azioni Dashboard</title>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9; }
+        .error-box { 
+            color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; 
+            padding: 15px; margin-bottom: 20px; border-radius: 4px; display: none; 
+        }
         .controls { margin-bottom: 20px; display: flex; gap: 10px; align-items: center; }
         button { padding: 8px 16px; cursor: pointer; }
         .container-periodo { margin-top: 20px; margin-bottom: 20px; padding: 20px; border: 1px solid #ddd; background: white; }
@@ -16,9 +20,11 @@
 </head>
 <body>
 
+    <div id="errore-box" class="error-box"></div>
+
     <div class="controls">
-        <button onclick="visualizzaDati('italiano')">Mercato Italiano</button>
-        <button onclick="visualizzaDati('americano')">Mercato Americano</button>
+        <button onclick="caricaDati('italiano')">Mercato Italiano</button>
+        <button onclick="caricaDati('americano')">Mercato Americano</button>
     </div>
 
     <div class="container-periodo">
@@ -37,41 +43,43 @@
             </tr>
         </thead>
         <tbody id="corpo-tabella">
-            <!-- I dati verranno inseriti qui -->
+            <!-- Dati caricati qui -->
         </tbody>
     </table>
 
     <script>
-        // Inserisci qui i tuoi dati manualmente (o verranno passati da un'altra sorgente)
-        const databaseLocale = {
-            italiano: [
-                { azione: "Enel", prezzo: "6.80 €", var_periodo: "+1.2%" },
-                { azione: "Intesa Sanpaolo", prezzo: "3.45 €", var_periodo: "+0.8%" }
-            ],
-            americano: [
-                { azione: "Apple", prezzo: "$175.00", var_periodo: "+2.5%" },
-                { azione: "Tesla", prezzo: "$220.00", var_periodo: "-1.1%" }
-            ]
-        };
+        async function caricaDati(mercato) {
+            const erroreBox = document.getElementById('errore-box');
+            erroreBox.style.display = 'none';
 
-        function visualizzaDati(mercato) {
-            const corpo = document.getElementById('corpo-tabella');
-            corpo.innerHTML = ''; // Svuota la tabella
-            
-            const datiSelezionati = databaseLocale[mercato];
-
-            if (datiSelezionati) {
-                datiSelezionati.forEach(item => {
-                    const row = `<tr>
-                        <td>${item.azione}</td>
-                        <td>${item.prezzo}</td>
-                        <td>${item.var_periodo}</td>
-                    </tr>`;
-                    corpo.innerHTML += row;
-                });
-            } else {
-                corpo.innerHTML = '<tr><td colspan="3">Nessun dato disponibile</td></tr>';
+            try {
+                // Legge dal JSON tramite il server NodeJS
+                const response = await fetch('/market_db.json');
+                
+                if (!response.ok) {
+                    throw new Error(`Errore Server`);
+                }
+                
+                const data = await response.json();
+                popolaTabella(data[mercato] || []);
+                
+            } catch (error) {
+                console.error(error);
+                erroreBox.innerText = "Errore nel caricamento dei dati di mercato: Impossibile caricare market_db.json";
+                erroreBox.style.display = 'block';
             }
+        }
+
+        function popolaTabella(azioni) {
+            const corpo = document.getElementById('corpo-tabella');
+            corpo.innerHTML = '';
+            azioni.forEach(item => {
+                corpo.innerHTML += `<tr>
+                    <td>${item.azione}</td>
+                    <td>${item.prezzo}</td>
+                    <td>${item.var_periodo}</td>
+                </tr>`;
+            });
         }
     </script>
 </body>
