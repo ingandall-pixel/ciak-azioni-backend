@@ -2,7 +2,7 @@ import sys
 import os
 import io
 
-# Reindirizza lo stderr verso stdout per evitare che server.js scambi i messaggi di Yahoo per errori critici
+# Redireziona lo stderr per silenziare i messaggi di Yahoo Finance
 sys.stderr = sys.stdout
 
 import yfinance as yf
@@ -14,14 +14,13 @@ import warnings
 import urllib.request
 from datetime import datetime
 
-# Disabilita gli avvisi visivi e i log di yfinance
 logging.getLogger('yfinance').setLevel(logging.CRITICAL)
 warnings.filterwarnings('ignore')
 
 DB_FILE = 'market_db.json'
 PROGRESS_FILE = 'progress.json'
 LOG_FILE = 'error_log.txt'
-BATCH_SIZE = 25  # Ridotto per evitare blocchi IP
+BATCH_SIZE = 20  # Blocco ridotto per evitare blocchi IP
 
 def update_progress(percent, status, extra_data=None):
     data = {"percent": percent, "status": status}
@@ -30,51 +29,30 @@ def update_progress(percent, status, extra_data=None):
     with open(PROGRESS_FILE, 'w') as f:
         json.dump(data, f)
 
-def log_error(message):
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    with open(LOG_FILE, 'a') as f:
-        f.write(f"[{timestamp}] {message}\n")
-
 def clean_ticker(symbol):
     if not symbol:
         return ""
     return str(symbol).replace('$', '').strip()
 
 def get_all_tickers():
-    update_progress(2, "Caricamento elenchi completi USA ed Italia...")
+    update_progress(2, "Caricamento elenchi S&P 500 ed Italia...")
     tickers_us = []
     
-    # 1. MERCATO USA COMPLETO
+    # Lista S&P 500 (circa 500 azioni principali USA)
     try:
+        url_sp500 = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
         req = urllib.request.Request(
-            'https://www.sec.gov/files/company_tickers.json',
-            headers={'User-Agent': 'FinancialAppUser admin@financialapp.com'}
+            url_sp500,
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         )
         with urllib.request.urlopen(req) as response:
-            sec_data = json.loads(response.read().decode())
-            for item in sec_data.values():
-                symbol = clean_ticker(item['ticker']).replace('.', '-')
-                if symbol and not symbol.startswith('$'):
-                    tickers_us.append(symbol)
-    except Exception as e:
-        log_error(f"Errore recupero SEC USA: {e}")
+            html = response.read().decode('utf-8')
+            sp500_df = pd.read_html(io.StringIO(html))[0]
+            tickers_us = [clean_ticker(t).replace('.', '-') for t in sp500_df['Symbol'].tolist()]
+    except Exception:
+        tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK-B', 'JNJ', 'V', 'JPM', 'WMT']
 
-    if not tickers_us:
-        try:
-            url_sp500 = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
-            req = urllib.request.Request(
-                url_sp500,
-                headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-            )
-            with urllib.request.urlopen(req) as response:
-                html = response.read().decode('utf-8')
-                sp500_df = pd.read_html(io.StringIO(html))[0]
-                tickers_us = [clean_ticker(t).replace('.', '-') for t in sp500_df['Symbol'].tolist()]
-        except Exception as e:
-            log_error(f"Errore recupero Wikipedia: {e}")
-            tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA']
-
-    # 2. MERCATO ITALIA
+    # Titoli Italia
     tickers_it_raw = [
         'A2A.MI', 'ACE.MI', 'AMP.MI', 'ANIM.MI', 'ARN.MI', 'AZM.MI', 'BAMI.MI', 
         'BFF.MI', 'BGN.MI', 'BMED.MI', 'BPE.MI', 'BRE.MI', 'BZU.MI', 'CPR.MI', 'DIA.MI', 
@@ -98,7 +76,7 @@ def download_data():
         try:
             with open(DB_FILE, 'r') as f:
                 market_data = json.load(f)
-        except Exception as e:
+        except Exception:
             market_data = {}
         period_to_fetch = "5d"
     else:
@@ -108,10 +86,6 @@ def download_data():
     ALL_TICKERS = get_all_tickers()
     total_tickers = len(ALL_TICKERS)
     
-    if total_tickers == 0:
-        update_progress(100, "Errore: Lista ticker vuota")
-        return
-
     ticker_batches = [ALL_TICKERS[i:i + BATCH_SIZE] for i in range(0, total_tickers, BATCH_SIZE)]
     total_batches = len(ticker_batches)
 
@@ -121,7 +95,6 @@ def download_data():
             percent = int((processed_count / total_tickers) * 90) + 5
             update_progress(percent, f"Scaricamento blocco ({b_idx + 1}/{total_batches}) - {processed_count}/{total_tickers} titoli...")
 
-            # threads=False per evitare rate limit da Yahoo Finance
             df_batch = yf.download(
                 tickers=batch,
                 period=period_to_fetch,
@@ -166,18 +139,16 @@ def download_data():
             with open(DB_FILE, 'w') as f:
                 json.dump(market_data, f)
 
-            # Pausa precauzionale tra i blocchi
-            time.sleep(1.2)
+            time.sleep(1.0)
 
-        except Exception as e:
-            time.sleep(3.0)
+        except Exception:
+            time.sleep(2.0)
             continue
 
     # Statistiche finali
     it_count = 0
     us_count = 0
-    it_years = []
-    us_years = []
+    it_years, us_years = [], []
 
     for sym, prices in market_data.items():
         if not prices or len(prices) < 2:
