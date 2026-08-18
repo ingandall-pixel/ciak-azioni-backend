@@ -70,7 +70,6 @@
             font-weight: 600;
         }
 
-        /* Stile rotella iOS */
         .ios-picker {
             background: #0f172a;
             border: 1px solid var(--border);
@@ -220,7 +219,16 @@
                     </tr>
                 </thead>
                 <tbody id="table-body">
-                    <!-- I risultati filtrati appariranno qui -->
+                    <!-- Esempio di riga strutturata con Ticker cliccabile -->
+                    <tr>
+                        <td><a href="https://www.investing.com/search/?q=ENEL" target="_blank" class="ticker-link">ENEL</a></td>
+                        <td>6.54</td>
+                        <td><img src="path_to_chart.png" alt="Trend" style="height: 30px;"></td>
+                        <td>+1.2%</td>
+                        <td>-0.5%</td>
+                        <td>+3.4%</td>
+                        <td>+2.1%</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -229,16 +237,39 @@
     <script>
         function avviaAnalisiMercato() {
             alert("Avvio aggiornamento incrementale di mercato sul server...");
-            // Chiamata backend per l'aggiornamento incrementale delle candele
+            // Logica di chiamata fetch per l'aggiornamento incrementale
         }
 
         function restituisciRisultati() {
             alert("Elaborazione filtri lato server in corso...");
-            // Chiamata backend per ottenere i risultati filtrati
+            // Logica di chiamata fetch per ottenere i dati filtrati dal server
         }
 
-        function sortTable(n) {
-            // Logica di ordinamento dinamico crescente/decrescente per colonna
+        let sortDirection = false;
+
+        function sortTable(columnIndex) {
+            const table = document.getElementById("results-table");
+            const tbody = document.getElementById("table-body");
+            const rows = Array.from(tbody.querySelectorAll("tr"));
+            
+            sortDirection = !sortDirection;
+
+            rows.sort((rowA, rowB) => {
+                const cellA = rowA.querySelectorAll("td")[columnIndex].innerText.trim();
+                const cellB = rowB.querySelectorAll("td")[columnIndex].innerText.trim();
+
+                const numA = parseFloat(cellA.replace(/[^0-9.-]+/g, ""));
+                const numB = parseFloat(cellB.replace(/[^0-9.-]+/g, ""));
+
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    return sortDirection ? numA - numB : numB - numA;
+                } else {
+                    return sortDirection ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
+                }
+            });
+
+            tbody.innerHTML = "";
+            rows.forEach(row => tbody.appendChild(row));
         }
     </script>
 </body>
