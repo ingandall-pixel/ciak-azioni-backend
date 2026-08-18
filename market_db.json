@@ -1,1 +1,28 @@
+async function loadMarketData() {
+    try {
+        // Assicurati che il percorso del file sia corretto rispetto al file HTML
+        const response = await fetch('./market_db.json');
+        
+        if (!response.ok) {
+            throw new Error(`Impossibile trovare il file (Stato: ${response.status})`);
+        }
+        
+        const data = await response.json();
+        console.log("Dati caricati correttamente:", data);
+        
+        // Esempio di chiamata alla funzione che popola la tabella con i dati
+        popolaTabella(data);
+        
+    } catch (error) {
+        console.error("Errore nel caricamento dei dati di mercato:", error.message);
+        
+        // Aggiornamento dell'interfaccia in caso di errore
+        const errorBox = document.getElementById('errore-box');
+        if (errorBox) {
+            errorBox.innerText = "Errore nel caricamento dei dati di mercato: Impossibile caricare market_db.json";
+        }
+    }
+}
 
+// Avvia la funzione al caricamento della pagina
+window.addEventListener('DOMContentLoaded', loadMarketData);
