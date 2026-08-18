@@ -101,7 +101,7 @@
             const periodoScelto = document.getElementById('select-periodo').value;
 
             for (const [ticker, storico] of Object.entries(globalMarketData)) {
-                // Filtra in base al mercato selezionato (corretto con endsWith maiuscolo)
+                // Filtra in base al mercato selezionato (CORRETTO con endsWith)
                 const isIt = ticker.endsWith('.MI') || ticker.endsWith('.AS') || !/^[A-Z\-]+$/.test(ticker);
                 if (currentMarket === 'IT' && !isIt) continue;
                 if (currentMarket === 'US' && isIt) continue;
