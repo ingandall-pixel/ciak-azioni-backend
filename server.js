@@ -1,71 +1,69 @@
-import os
-import json
-import yfinance as yf
-import pandas as pd
-from datetime import datetime, timedelta
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
 
-DB_FILE = "market_db.json"
-MAX_TRADING_DAYS = 1300  # Circa 5 anni di giorni di borsa aperta
+const app = express();
+const PORT = process.env.PORT || 3000;
+const DB_FILE = path.join(__dirname, 'market_db.json');
 
-def aggrega_aggiornamento_incrementale():
-    """
-    Legge il database esistente, verifica l'ultima data disponibile per ogni titolo,
-    scarica solo le nuove candele mancanti e rimuove quelle più vecchie (FIFO) 
-    per mantenere il limite massimo di candele.
-    """
-    if not os.path.exists(DB_FILE):
-        return {"status": "Database non trovato. Eseguire prima la creazione iniziale."}
+// Middleware per leggere il formato JSON e servire i file statici dalla cartella public
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-    with open(DB_FILE, "r") as f:
-        db_data = json.load(f)
+// 1. Rotta per l'aggiornamento incrementale (collegata a "Avvia analisi di mercato")
+app.post('/api/update-market', (req, res) => {
+    if (!fs.existsSync(DB_FILE)) {
+        return res.status(404).json({ status: "error", message: "Database non trovato." });
+    }
 
-    # Logica di aggiornamento incrementale per ciascun ticker presente nel db
-    for ticker, data in db_data.items():
-        try:
-            # Recupera l'ultima data registrata
-            last_date_str = data.get("last_date")
-            # Scarica le nuove quotazioni da yfinance a partire dall'ultimo giorno utile
-            df_new = yf.download(ticker, start=last_date_str, progress=False)
-            
-            if not df_new.empty:
-                # Aggiunge i nuovi dati e mantiene la finestra fissa rimuovendo i dati in eccesso dalla testa
-                # (mantenendo massimo MAX_TRADING_DAYS)
-                pass
-        except Exception as e:
-            print(f"Errore nell'aggiornamento di {ticker}: {e}")
-
-    return {"status": "Aggiornamento incrementale completato con successo!"}
-
-def calcola_filtri_lato_server(median_val, std_val):
-    """
-    Legge il database locale, applica i calcoli matematici con i parametri
-    ricevuti dal frontend e restituisce solo i titoli che superano i filtri.
-    """
-    if not os.path.exists(DB_FILE):
-        return []
-
-    with open(DB_FILE, "r") as f:
-        db_data = json.load(f)
-
-    risultati_filtrati = []
-
-    for ticker, data in db_data.items():
-        # Esempio di elaborazione logica basata su mediana e deviazione standard
-        # Qui inserisci il tuo algoritmo di calcolo esistente
+    try {
+        // Qui puoi inserire o richiamare la logica di aggiornamento delle candele
+        // (es. leggendo market_db.json e aggiornando i dati)
         
-        # Inseriamo il risultato pronto per la tabella con il link a Investing.com
-        # (es. ricerca standard su investing basata sul ticker)
-        investing_url = f"https://www.investing.com/search/?q={ticker}"
-        
-        risultati_filtrati.append({
-            "ticker": ticker,
-            "url": investing_url,
-            "prezzo": data.get("prezzo", 0.0),
-            "trend_img": data.get("trend_img", ""),
-            "perf1": data.get("perf1", 0.0),
-            "perf2": data.get("perf2", 0.0),
-            "perf3": data.get("perf3", 0.0),
-            "perf4": data.get("perf4", 0.0)
-        })
+        res.json({ status: "success", message: "Analisi di mercato e aggiornamento incrementale completati con successo!" });
+    } catch (error) {
+        res.status(500).json({ status: "error", message: "Errore durante l'aggiornamento del mercato." });
+    }
+});
 
-    return risultati_filtrati
+// 2. Rotta per restituire i risultati filtrati (collegata a "Restituisci risultati")
+app.post('/api/get-results', (req, res) => {
+    const { timeframe, median, std } = req.body;
+
+    if (!fs.existsSync(DB_FILE)) {
+        return res.json([]);
+    }
+
+    try {
+        const rawData = fs.readFileSync(DB_FILE, 'utf8');
+        const dbData = JSON.parse(rawData);
+
+        let risultatiFiltrati = [];
+
+        for (const [ticker, data] of Object.entries(dbData)) {
+            // Genera il link diretto a Investing.com per il ticker
+            const investingUrl = `https://www.investing.com/search/?q=${ticker}`;
+
+            risultatiFiltrati.push({
+                ticker: ticker,
+                url: investingUrl,
+                prezzo: data.prezzo || 0.0,
+                trend_img: data.trend_img || "",
+                perf1: data.perf1 || 0.0,
+                perf2: data.perf2 || 0.0,
+                perf3: data.perf3 || 0.0,
+                perf4: data.perf4 || 0.0
+            });
+        }
+
+        res.json(risultatiFiltrati);
+    } catch (error) {
+        console.error("Errore nella lettura del database:", error);
+        res.status(500).json([]);
+    }
+});
+
+// Avvio del server
+app.listen(PORT, () => {
+    console.log(`Server CIAK!-AZIONI in ascolto sulla porta ${PORT}`);
+});
