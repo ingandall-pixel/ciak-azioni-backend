@@ -28,6 +28,7 @@ def calculate_screening(market, period, median_markup, std_markup, sort_by, sort
         df = pd.DataFrame(list(prices_dict.items()), columns=['Date', 'Close'])
         df['Date'] = pd.to_datetime(df['Date'])
         df.set_index('Date', inplace=True)
+        df.sort_index(inplace=True)  # Ordinamento cronologico garantito
         df['Close'] = pd.to_numeric(df['Close'], errors='coerce')
         df.dropna(inplace=True)
 
