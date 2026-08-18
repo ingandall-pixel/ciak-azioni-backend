@@ -23,7 +23,7 @@
 <div class="container">
     <h2>CIAK!-AZIONI</h2>
 
-    <!-- Sezione Aggiornamento Dati (Pulsante originale ripristinato) -->
+    <!-- Sezione Aggiornamento Dati -->
     <div style="margin-bottom: 20px;">
         <button onclick="avviaAggiornamento()">Avvia analisi di mercato (Download)</button>
         <div id="loading-update" class="loading">⏳ Download e aggiornamento dati in corso, attendere...</div>
@@ -38,7 +38,7 @@
         </select>
         <input type="number" id="median" value="50" min="-100" max="100" placeholder="Min Mediana %">
         <input type="number" id="std" value="10" min="0" max="1000" placeholder="Min Std %">
-        <button onclick="caricaRisultati()">Analizza</button>
+        <button onclick="caricaRisultati()">Restituisci risultati</button>
     </div>
     
     <div class="legend">
