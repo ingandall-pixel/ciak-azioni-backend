@@ -4,7 +4,6 @@ import time
 import urllib.request
 import pandas as pd
 import io
-from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = os.path.join(BASE_DIR, 'market_db.json')
@@ -28,7 +27,7 @@ def clean_ticker(symbol):
 def get_all_tickers():
     update_progress(2, "Caricamento registro completo delle azioni USA (SEC) e Italia...")
     
-    # 1. Azioni USA dalla SEC (numero di azioni invariato)
+    # 1. Azioni USA dalla SEC
     tickers_us = []
     try:
         url_sec = 'https://www.sec.gov/files/company_tickers.json'
@@ -42,17 +41,19 @@ def get_all_tickers():
     except Exception:
         tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA']
 
-    # 2. Azioni Italia
+    # 2. Azioni Italia da file o lista completa estesa
     tickers_it = []
     it_file_path = os.path.join(BASE_DIR, 'tickers_it.txt')
     if os.path.exists(it_file_path):
         try:
             with open(it_file_path, 'r', encoding='utf-8') as f:
                 tickers_it = [clean_ticker(line) for line in f if line.strip()]
+            print(f"[INFO] Caricate {len(tickers_it)} azioni italiane da tickers_it.txt")
         except Exception:
             pass
     
     if not tickers_it:
+        # Lista di riserva completa ed estesa di Piazza Affari
         tickers_it_raw = [
             'A2A.MI', 'ACE.MI', 'AMP.MI', 'ANIM.MI', 'ARN.MI', 'AZM.MI', 'BAMI.MI', 
             'BFF.MI', 'BGN.MI', 'BMED.MI', 'BPE.MI', 'BRE.MI', 'BZU.MI', 'CPR.MI', 'DIA.MI', 
@@ -61,14 +62,17 @@ def get_all_tickers():
             'LUVE.MI', 'MB.MI', 'MFEA.MI', 'MFEB.MI', 'MONC.MI', 'NEXI.MI', 'PIA.MI', 'PIR.MI', 
             'PRY.MI', 'PST.MI', 'RACE.MI', 'REC.MI', 'RWAY.MI', 'SAF.MI', 'SFL.MI', 'SL.MI', 
             'SPM.MI', 'SRG.MI', 'STM.MI', 'TEN.MI', 'TIT.MI', 'TRN.MI', 'TXT.MI', 'UCG.MI', 
-            'UNI.MI', 'VTY.MI', 'WBA.MI', 'ENAV.MI', 'SFER.MI', 'EXO.MI', 'HERA.MI'
+            'UNI.MI', 'VTY.MI', 'WBA.MI', 'ENAV.MI', 'SFER.MI', 'EXO.MI', 'HERA.MI',
+            'AMP.MI', 'BNS.MI', 'CEM.MI', 'DIB.MI', 'ECA.MI', 'AAL.MI', 'PRT.MI'
         ]
         tickers_it = [clean_ticker(t) for t in tickers_it_raw if clean_ticker(t)]
+        print(f"[INFO] Usata lista di riserva con {len(tickers_it)} azioni italiane.")
 
-    return list(dict.fromkeys(tickers_it + tickers_us))
+    all_tickers = list(dict.fromkeys(tickers_it + tickers_us))
+    print(f"[INFO] Totale complessivo ticker da analizzare: {len(all_tickers)}")
+    return all_tickers
 
 def download_stooq_data(symbol):
-    # Converte il simbolo per l'interrogazione pulita su Stooq
     if symbol.endswith('.MI'):
         stooq_symbol = symbol.replace('.MI', '.it').lower()
     else:
@@ -111,10 +115,11 @@ def download_data():
         if history:
             market_data[ticker] = history
         
-        time.sleep(0.03) # Pausa minima e sicura per la stabilità della connessione
+        time.sleep(0.03)
 
     it_count = sum(1 for sym in market_data if sym.endswith('.MI'))
     us_count = len(market_data) - it_count
+    
     it_avg_years = 2.0
     us_avg_years = 2.0
 
