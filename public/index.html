@@ -219,11 +219,10 @@
                     </tr>
                 </thead>
                 <tbody id="table-body">
-                    <!-- Esempio di riga strutturata con Ticker cliccabile -->
                     <tr>
                         <td><a href="https://www.investing.com/search/?q=ENEL" target="_blank" class="ticker-link">ENEL</a></td>
                         <td>6.54</td>
-                        <td><img src="path_to_chart.png" alt="Trend" style="height: 30px;"></td>
+                        <td><img src="" alt="Trend" style="height: 30px;"></td>
                         <td>+1.2%</td>
                         <td>-0.5%</td>
                         <td>+3.4%</td>
@@ -235,20 +234,54 @@
     </div>
 
     <script>
-        function avviaAnalisiMercato() {
+        async function avviaAnalisiMercato() {
             alert("Avvio aggiornamento incrementale di mercato sul server...");
-            // Logica di chiamata fetch per l'aggiornamento incrementale
+            try {
+                const response = await fetch('/api/update-market', { method: 'POST' });
+                const result = await response.json();
+                alert(result.message || "Operazione completata");
+            } catch (error) {
+                console.error("Errore:", error);
+            }
         }
 
-        function restituisciRisultati() {
-            alert("Elaborazione filtri lato server in corso...");
-            // Logica di chiamata fetch per ottenere i dati filtrati dal server
+        async function restituisciRisultati() {
+            const timeframe = document.getElementById("tf-select").value;
+            const median = document.getElementById("median-val").value;
+            const std = document.getElementById("std-val").value;
+
+            try {
+                const response = await fetch('/api/get-results', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timeframe, median, std })
+                });
+                
+                const data = await response.json();
+                const tbody = document.getElementById("table-body");
+                tbody.innerHTML = "";
+
+                data.forEach(item => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td><a href="${item.url}" target="_blank" class="ticker-link">${item.ticker}</a></td>
+                        <td>${item.prezzo}</td>
+                        <td><img src="${item.trend_img}" alt="Trend" style="height: 30px;"></td>
+                        <td>${item.perf1}%</td>
+                        <td>${item.perf2}%</td>
+                        <td>${item.perf3}%</td>
+                        <td>${item.perf4}%</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error("Errore nel recupero dei risultati:", error);
+            }
         }
 
         let sortDirection = false;
 
         function sortTable(columnIndex) {
-            const table = document.getElementById("results-table");
             const tbody = document.getElementById("table-body");
             const rows = Array.from(tbody.querySelectorAll("tr"));
             
