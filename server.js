@@ -1,109 +1,80 @@
 const express = require('express');
+const cors = require('cors');
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-let isAnalyzing = false; // Previeni sovrapposizione di istanze parallele
-
+app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Stato di avanzamento
-app.get('/api/progress', (req, res) => {
-    try {
-        const progressData = fs.readFileSync('progress.json', 'utf8');
-        res.json(JSON.parse(progressData));
-    } catch (err) {
-        res.json({ percent: 0, status: "Pronto per l'avvio..." });
-    }
-});
-
-// Download del file log di errore
-app.get('/api/download-log', (req, res) => {
-    const logPath = path.join(__dirname, 'error_log.txt');
-    if (fs.existsSync(logPath)) {
-        res.download(logPath);
-    } else {
-        res.status(404).send("Nessun file di log trovato.");
-    }
-});
-
-// Esecuzione dell'algoritmo di analisi e restituzione dati al frontend
-app.get('/api/data', (req, res) => {
-    const { market, period, medianMarkup, stdMarkup, sortBy, sortOrder } = req.query;
+// Endpoint per avviare l'aggiornamento del database
+app.get('/api/update-db', (req, res) => {
+    const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+    const pythonProcess = spawn(pythonCmd, ['update_db.py']);
     
-    const args = [
-        'analyzer.py',
-        market || 'it',
-        period || '1y',
-        medianMarkup || '0',
-        stdMarkup || '0',
-        sortBy || 'perf',
-        sortOrder || 'desc'
-    ];
-
-    const pythonProcess = spawn('python3', args);
-    let dataString = '';
-
-    pythonProcess.stdout.on('data', (data) => {
-        dataString += data.toString();
+    let stderrOutput = '';
+    pythonProcess.stderr.on('data', (data) => {
+        stderrOutput += data.toString();
     });
 
     pythonProcess.on('close', (code) => {
-        if (code !== 0) {
-            return res.status(500).json({ error: "Errore durante l'elaborazione dei dati." });
-        }
-        try {
-            const results = JSON.parse(dataString);
-            res.json(results);
-        } catch (err) {
-            res.status(500).json({ error: "Errore nel parsing JSON dei risultati." });
-        }
-    });
-});
-
-// Avvio aggiornamento database
-app.post('/api/run-analysis', (req, res) => {
-    if (isAnalyzing) {
-        return res.status(400).json({ success: false, message: "Aggiornamento già in corso." });
-    }
-
-    isAnalyzing = true;
-    console.log("Ricevuto comando: Inizio aggiornamento database completo...");
-    
-    fs.writeFileSync('progress.json', JSON.stringify({ percent: 0, status: "Inizializzazione script..." }));
-    
-    if (fs.existsSync('error_log.txt')) {
-        fs.unlinkSync('error_log.txt');
-    }
-
-    const pythonProcess = spawn('python3', ['update_db.py']);
-    res.json({ success: true, message: "Processo avviato." });
-
-    pythonProcess.on('close', (code) => {
-        isAnalyzing = false;
-        console.log(`Script Python terminato con codice ${code}`);
         if (code === 0) {
-            fs.writeFileSync('progress.json', JSON.stringify({ percent: 100, status: "Completato!" }));
+            res.json({ success: true, message: 'Database aggiornato con successo.' });
         } else {
-            fs.writeFileSync('progress.json', JSON.stringify({ percent: 100, status: "Errore durante il processo!" }));
+            res.status(500).json({ success: false, message: 'Errore durante l\'aggiornamento del DB', error: stderrOutput });
         }
+    });
+});
+
+// Endpoint per avviare l'analisi completa dei dati
+app.get('/api/analyze', (req, res) => {
+    const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
+    const pythonProcess = spawn(pythonCmd, ['analyzer.py']);
+    
+    let output = '';
+    let stderrOutput = '';
+    
+    pythonProcess.stdout.on('data', (data) => {
+        output += data.toString();
     });
 
     pythonProcess.stderr.on('data', (data) => {
-        const errMessage = data.toString();
-        console.error(`ERRORE PYTHON: ${errMessage}`);
-        fs.appendFileSync('error_log.txt', `${new Date().toISOString()} - ${errMessage}\n`);
+        stderrOutput += data.toString();
+    });
+
+    pythonProcess.on('close', (code) => {
+        if (code === 0) {
+            try {
+                const results = JSON.parse(output);
+                res.json({ success: true, data: results });
+            } catch (e) {
+                res.status(500).json({ success: false, message: 'Errore di parsing JSON dall\'analisi', raw: output });
+            }
+        } else {
+            res.status(500).json({ success: false, message: 'Errore durante l\'esecuzione dell\'analisi', error: stderrOutput });
+        }
     });
 });
 
-const PORT = process.env.PORT || 3000;
+// Endpoint per monitorare lo stato di avanzamento in tempo reale
+app.get('/api/progress', (req, res) => {
+    const progressPath = path.join(__dirname, 'progress.json');
+    if (fs.existsSync(progressPath)) {
+        try {
+            const data = fs.readFileSync(progressPath, 'utf8');
+            res.json(JSON.parse(data));
+        } catch (e) {
+            res.json({ percent: 0, status: 'Lettura progresso in corso...' });
+        }
+    } else {
+        res.json({ percent: 0, status: 'In attesa dell\'avvio' });
+    }
+});
+
 app.listen(PORT, () => {
-    console.log(`Server attivo sulla porta ${PORT}`);
+    console.log(`Server Node.js avviato sulla porta ${PORT}`);
 });
