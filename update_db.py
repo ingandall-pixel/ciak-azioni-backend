@@ -2,8 +2,8 @@ import sys
 import os
 import io
 
-# Redireziona lo stderr per silenziare i messaggi di Yahoo Finance
-sys.stderr = sys.stdout
+# Reindirizza stderr su devnull per evitare che server.js scambi log innocui per errori
+sys.stderr = open(os.devnull, 'w')
 
 import yfinance as yf
 import pandas as pd
@@ -14,13 +14,14 @@ import warnings
 import urllib.request
 from datetime import datetime
 
+# Disattiva completamente i log interni di yfinance
 logging.getLogger('yfinance').setLevel(logging.CRITICAL)
 warnings.filterwarnings('ignore')
 
 DB_FILE = 'market_db.json'
 PROGRESS_FILE = 'progress.json'
 LOG_FILE = 'error_log.txt'
-BATCH_SIZE = 20  # Blocco ridotto per evitare blocchi IP
+BATCH_SIZE = 15  # Blocchi più piccoli per evitare rate limit
 
 def update_progress(percent, status, extra_data=None):
     data = {"percent": percent, "status": status}
@@ -38,7 +39,7 @@ def get_all_tickers():
     update_progress(2, "Caricamento elenchi S&P 500 ed Italia...")
     tickers_us = []
     
-    # Lista S&P 500 (circa 500 azioni principali USA)
+    # Lista S&P 500 (azioni principali USA)
     try:
         url_sp500 = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
         req = urllib.request.Request(
@@ -105,7 +106,7 @@ def download_data():
             )
 
             if df_batch is None or df_batch.empty:
-                time.sleep(1.0)
+                time.sleep(1.5)
                 continue
 
             for ticker in batch:
@@ -139,10 +140,11 @@ def download_data():
             with open(DB_FILE, 'w') as f:
                 json.dump(market_data, f)
 
-            time.sleep(1.0)
+            # Pausa precauzionale tra le richieste
+            time.sleep(1.5)
 
         except Exception:
-            time.sleep(2.0)
+            time.sleep(3.0)
             continue
 
     # Statistiche finali
