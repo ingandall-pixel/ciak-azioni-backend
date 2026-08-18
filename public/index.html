@@ -3,184 +3,316 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CIAK! - AZIONI</title>
+    <title>Stock Market Analyzer</title>
     <style>
+        :root {
+            --bg-color: #f2f2f7;
+            --card-bg: #ffffff;
+            --accent: #007aff;
+            --text-main: #000000;
+            --text-sub: #8e8e93;
+            --green: #34c759;
+            --red: #ff3b30;
+            --border: #e5e5ea;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: #ffffff;
-            color: #333;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
             margin: 0;
             padding: 20px;
         }
+
         .container {
-            max-width: 1200px;
-            margin: auto;
+            max-width: 1000px;
+            margin: 0 auto;
         }
-        h1 {
-            font-size: 26px;
-            color: #111;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .nav-buttons {
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 20px;
         }
-        .nav-buttons button {
-            padding: 8px 16px;
-            margin-right: 5px;
-            background-color: #f8f9fa;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 15px;
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .slider-group label {
+            font-size: 13px;
+            color: var(--text-sub);
+            margin-bottom: 6px;
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: var(--border);
+            height: 6px;
+            border-radius: 3px;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #ffffff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
             cursor: pointer;
-            font-weight: bold;
         }
-        .nav-buttons button.active {
-            background-color: #e2e6ea;
-            border-color: #adb5bd;
+
+        .tabs {
+            display: flex;
+            background: var(--border);
+            padding: 2px;
+            border-radius: 8px;
+            margin-bottom: 15px;
         }
-        .controls {
-            margin-bottom: 20px;
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 8px;
             font-size: 14px;
-            font-weight: bold;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 6px;
         }
-        select {
-            padding: 6px 10px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
+
+        .tab.active {
+            background: #ffffff;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
         }
+
         th, td {
-            padding: 12px;
             text-align: left;
-            border-bottom: 1px solid #dee2e6;
+            padding: 12px 8px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
         }
+
         th {
-            background-color: #212529;
-            color: white;
+            color: var(--text-sub);
+            font-weight: 500;
+            cursor: pointer;
         }
-        tr:hover {
-            background-color: #f1f3f5;
+
+        .val-pos { color: var(--green); font-weight: 600; }
+        .val-neg { color: var(--red); font-weight: 600; }
+
+        .progress-bar {
+            height: 4px;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.3s;
+            border-radius: 2px;
         }
-        .positive {
-            color: #28a745;
-            font-weight: bold;
-        }
-        .negative {
-            color: #dc3545;
-            font-weight: bold;
-        }
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: #666;
+
+        .sparkline {
+            width: 80px;
+            height: 25px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Titolo principale richiesto -->
-        <h1>CIAK! - AZIONI</h1>
-
-        <!-- Pulsanti Mercati -->
-        <div class="nav-buttons">
-            <button id="btn-it" class="active" onclick="switchMarket('IT')">Mercato Italiano</button>
-            <button id="btn-us" onclick="switchMarket('US')">Mercato Americano</button>
+        <div class="header">
+            <h2>Market Analyzer</h2>
+            <button class="btn" onclick="triggerDownload()">Avvia analisi</button>
         </div>
 
-        <!-- Selettore Periodo aggiornato -->
-        <div class="controls">
-            <label for="period-select">Periodo: </label>
-            <select id="period-select" onchange="renderTable()">
-                <option value="1d">1 Giorno</option>
-                <option value="1w">1 Settimana</option>
-                <option value="1m">1 Mese</option>
-                <option value="1y" selected>1 Anno</option>
-                <option value="5y">5 Anni</option>
-                <option value="all">Massimo</option>
-            </select>
+        <div id="progress-container" style="display:none;" class="card">
+            <div id="progress-text" style="font-size: 12px; margin-bottom: 5px;">Inizio...</div>
+            <div style="background: var(--border); height: 4px; border-radius: 2px;">
+                <div id="progress-bar" class="progress-bar"></div>
+            </div>
         </div>
 
-        <!-- Tabella Azioni -->
-        <table>
-            <thead>
-                <tr>
-                    <th>Azione</th>
-                    <th>Prezzo</th>
-                    <th>Var. Periodo (%)</th>
-                </tr>
-            </thead>
-            <tbody id="table-body">
-                <tr>
-                    <td colspan="3" class="loading">Caricamento dati in corso...</td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="card">
+            <div class="tabs">
+                <div class="tab active" onclick="switchMarket('IT', this)">Mercato Italiano</div>
+                <div class="tab" onclick="switchMarket('US', this)">Mercato Americano</div>
+            </div>
+
+            <div class="controls-grid">
+                <div class="slider-group">
+                    <label>Timeframe: <b id="tf-val">1M</b></label>
+                    <select id="tf-select" style="padding: 6px; border-radius: 6px; border: 1px solid var(--border);" onchange="updateData()">
+                        <option value="1d">1 Giorno</option>
+                        <option value="1w">1 Settimana</option>
+                        <option value="1m" selected>1 Mese</option>
+                        <option value="1y">1 Anno</option>
+                        <option value="5y">5 Anni</option>
+                        <option value="max">Max Storico</option>
+                    </select>
+                </div>
+
+                <div class="slider-group">
+                    <label>Markup Mediana/Media: <b id="med-val">1%</b></label>
+                    <input type="range" id="med-slider" min="1" max="100" value="1" oninput="document.getElementById('med-val').innerText=this.value+'%'; updateData();">
+                </div>
+
+                <div class="slider-group">
+                    <label>Rapporto Dev.Std/Media: <b id="std-val">1%</b></label>
+                    <input type="range" id="std-slider" min="1" max="1000" value="1" oninput="document.getElementById('std-val').innerText=this.value+'%'; updateData();">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Azione</th>
+                        <th>Trend</th>
+                        <th>Prezzo</th>
+                        <th onclick="sortTable('var_period')">Var. Periodo %</th>
+                        <th onclick="sortTable('var_daily')">Var. Giornaliera %</th>
+                        <th onclick="sortTable('med_mean_ratio')">Mediana/Media %</th>
+                        <th onclick="sortTable('std_mean_ratio')">Dev.Std/Media %</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script>
-        let allData = [];
         let currentMarket = 'IT';
+        let tableData = [];
+        let sortAsc = false;
 
-        function loadData() {
-            fetch('/api/analyze')
+        function switchMarket(m, el) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            currentMarket = m;
+            updateData();
+        }
+
+        function triggerDownload() {
+            fetch('/api/run-download', { method: 'POST' });
+            document.getElementById('progress-container').style.display = 'block';
+            pollProgress();
+        }
+
+        function pollProgress() {
+            const interval = setInterval(() => {
+                fetch('/api/progress')
+                    .then(res => res.json())
+                    .then(data => {
+                        document.getElementById('progress-bar').style.width = data.percent + '%';
+                        document.getElementById('progress-text').innerText = data.status;
+                        if (data.percent >= 100) {
+                            clearInterval(interval);
+                            setTimeout(() => {
+                                document.getElementById('progress-container').style.display = 'none';
+                                updateData();
+                            }, 1000);
+                        }
+                    });
+            }, 2000);
+        }
+
+        function updateData() {
+            const tf = document.getElementById('tf-select').value;
+            const med = document.getElementById('med-slider').value;
+            const std = document.getElementById('std-slider').value;
+
+            fetch(`/api/analyze?market=${currentMarket}&tf=${tf}&median_markup=${med}&std_ratio=${std}`)
                 .then(res => res.json())
-                .then(response => {
-                    if (response.success && Array.isArray(response.data)) {
-                        allData = response.data;
-                    } else if (Array.isArray(response)) {
-                        allData = response;
-                    }
+                .then(data => {
+                    tableData = data;
                     renderTable();
-                })
-                .catch(err => {
-                    console.error('Errore nel recupero dati:', err);
-                    document.getElementById('table-body').innerHTML = `<tr><td colspan="3" style="color:red; text-align:center;">Errore di caricamento dal server.</td></tr>`;
                 });
         }
 
-        function switchMarket(market) {
-            currentMarket = market;
-            document.getElementById('btn-it').classList.toggle('active', market === 'IT');
-            document.getElementById('btn-us').classList.toggle('active', market === 'US');
+        function sortTable(key) {
+            sortAsc = !sortAsc;
+            tableData.sort((a, b) => sortAsc ? a[key] - b[key] : b[key] - a[key]);
             renderTable();
+        }
+
+        function drawSparkline(canvas, points) {
+            const ctx = canvas.getContext('2d');
+            const min = Math.min(...points);
+            const max = Math.max(...points);
+            const range = max - min || 1;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.strokeStyle = points[points.length - 1] >= points[0] ? '#34c759' : '#ff3b30';
+            ctx.lineWidth = 1.5;
+
+            points.forEach((p, i) => {
+                const x = (i / (points.length - 1)) * canvas.width;
+                const y = canvas.height - ((p - min) / range) * canvas.height;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
         }
 
         function renderTable() {
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
-
-            const selectedPeriod = document.getElementById('period-select').value;
-            const filtered = allData.filter(item => item.market === currentMarket);
-
-            if (filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="3" class="loading">Nessun dato disponibile per questo mercato. Esegui l'aggiornamento del database.</td></tr>`;
-                return;
-            }
-
-            filtered.forEach(item => {
+            tableData.forEach((row, i) => {
                 const tr = document.createElement('tr');
+                const investUrl = `https://www.investing.com/search/?q=${row.ticker.split('.')[0]}`;
                 
-                const returns = item.returns || {};
-                const varValue = returns[selectedPeriod] !== undefined ? returns[selectedPeriod] : 0;
-                
-                const varClass = varValue >= 0 ? 'positive' : 'negative';
-                const sign = varValue >= 0 ? '+' : '';
-
                 tr.innerHTML = `
-                    <td>${item.ticker}</td>
-                    <td>${item.current_price.toFixed(2)}</td>
-                    <td class="${varClass}">${sign}${varValue}%</td>
+                    <td>
+                        <a href="${investUrl}" target="_blank" style="text-decoration:none; color:var(--accent); font-weight:600;">
+                            ${row.ticker}
+                        </a>
+                    </td>
+                    <td><canvas id="spark-${i}" class="sparkline" width="80" height="25"></canvas></td>
+                    <td>${row.price}</td>
+                    <td class="${row.var_period >= 0 ? 'val-pos' : 'val-neg'}">${row.var_period}%</td>
+                    <td class="${row.var_daily >= 0 ? 'val-pos' : 'val-neg'}">${row.var_daily}%</td>
+                    <td>${row.med_mean_ratio}%</td>
+                    <td>${row.std_mean_ratio}%</td>
                 `;
                 tbody.appendChild(tr);
+                drawSparkline(document.getElementById(`spark-${i}`), row.sparkline);
             });
         }
 
-        loadData();
+        updateData();
     </script>
 </body>
 </html>
