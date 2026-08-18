@@ -12,7 +12,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Rotta per i progressi del download
+// Stato di avanzamento
 app.get('/api/progress', (req, res) => {
     try {
         const progressData = fs.readFileSync('progress.json', 'utf8');
@@ -22,7 +22,7 @@ app.get('/api/progress', (req, res) => {
     }
 });
 
-// Rotta per scaricare il file log errori
+// Download del file log di errore
 app.get('/api/download-log', (req, res) => {
     const logPath = path.join(__dirname, 'error_log.txt');
     if (fs.existsSync(logPath)) {
@@ -32,7 +32,7 @@ app.get('/api/download-log', (req, res) => {
     }
 });
 
-// Rotta fondamentale: chiama analyzer.py per restituire i calcoli alla tabella
+// Esecuzione dell'algoritmo di analisi e restituzione dati al frontend
 app.get('/api/data', (req, res) => {
     const { market, period, medianMarkup, stdMarkup, sortBy, sortOrder } = req.query;
     
@@ -66,9 +66,9 @@ app.get('/api/data', (req, res) => {
     });
 });
 
-// Rotta per avviare il download dell'intero archivio
+// Avvio aggiornamento database
 app.post('/api/run-analysis', (req, res) => {
-    console.log("Ricevuto comando: Inizio elaborazione database...");
+    console.log("Ricevuto comando: Inizio aggiornamento database completo...");
     
     fs.writeFileSync('progress.json', JSON.stringify({ percent: 0, status: "Inizializzazione script..." }));
     
