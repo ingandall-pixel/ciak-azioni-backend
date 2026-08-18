@@ -19,9 +19,9 @@
         #progress-text { position: absolute; width: 100%; text-align: center; top: 3px; font-size: 14px; font-weight: bold; color: #333; }
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
-        .modal-box { display: none; position: fixed; top: 30%; left: 50%; transform: translateX(-50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 1000; text-align: center; width: 320px; }
-        .modal-box h3 { margin-top: 0; margin-bottom: 10px; }
-        .modal-box p { color: #666; margin-bottom: 20px; font-size: 15px; }
+        .modal-box { display: none; position: fixed; top: 25%; left: 50%; transform: translateX(-50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 1000; text-align: center; width: 360px; }
+        .modal-box h3 { margin-top: 0; margin-bottom: 12px; }
+        .stats-card { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 12px; text-align: left; font-size: 14px; margin-bottom: 15px; line-height: 1.6; }
         .modal-btn { padding: 10px 20px; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
 
         .market-sections { display: flex; gap: 20px; margin-bottom: 20px; }
@@ -47,15 +47,18 @@
 <body>
 
 <div id="modal-overlay" class="modal-overlay"></div>
+
 <div id="success-popup" class="modal-box">
     <h3 style="color: #28a745;">Operazione Completata!</h3>
-    <p>Tutti i listini azionari sono stati aggiornati correttamente.</p>
+    <div id="stats-content" class="stats-card">
+        Elaborazione completata con successo.
+    </div>
     <button class="modal-btn" style="background: #28a745;" onclick="closeModal()">OK</button>
 </div>
 
 <div id="error-popup" class="modal-box">
     <h3 style="color: #dc3545;">Errore Riscontrato</h3>
-    <p>Si è verificato un problema. Scarica il file di log per verificare le azioni escluse.</p>
+    <p>Si è verificato un problema durante lo scaricamento. Scarica il file di log per verificare le azioni escluse.</p>
     <button class="modal-btn" style="background: #dc3545;" onclick="closeModal()">OK</button>
 </div>
 
@@ -194,10 +197,25 @@
                         document.getElementById('btn-avvia').disabled = false;
                         
                         document.getElementById('modal-overlay').style.display = 'block';
+                        
                         if (status.includes("Errore")) {
                             document.getElementById('btn-download-log').style.display = 'inline-block';
                             document.getElementById('error-popup').style.display = 'block';
                         } else {
+                            const itCount = data.it_count !== undefined ? data.it_count : 0;
+                            const itYears = data.it_avg_years !== undefined ? data.it_avg_years : 0.0;
+                            const usCount = data.us_count !== undefined ? data.us_count : 0;
+                            const usYears = data.us_avg_years !== undefined ? data.us_avg_years : 0.0;
+
+                            document.getElementById('stats-content').innerHTML = `
+                                <div style="margin-bottom: 8px;">🇮🇹 <strong>Mercato Italiano:</strong></div>
+                                <div style="padding-left: 10px;">• Titoli in archivio: <strong>${itCount}</strong></div>
+                                <div style="padding-left: 10px;">• Media storico: <strong>${itYears.toFixed(1)} anni</strong></div>
+                                <hr style="border:0; border-top: 1px dashed #ccc; margin: 10px 0;">
+                                <div style="margin-bottom: 8px;">🇺🇸 <strong>Mercato Americano:</strong></div>
+                                <div style="padding-left: 10px;">• Titoli in archivio: <strong>${usCount}</strong></div>
+                                <div style="padding-left: 10px;">• Media storico: <strong>${usYears.toFixed(1)} anni</strong></div>
+                            `;
                             document.getElementById('success-popup').style.display = 'block';
                             loadData();
                         }
