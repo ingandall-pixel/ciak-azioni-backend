@@ -28,7 +28,6 @@ def clean_ticker(symbol):
 def get_all_tickers():
     update_progress(2, "Caricamento registro completo delle azioni USA (SEC) e Italia...")
     
-    # 1. Azioni USA dalla SEC
     tickers_us = []
     try:
         url_sec = 'https://www.sec.gov/files/company_tickers.json'
@@ -42,7 +41,6 @@ def get_all_tickers():
     except Exception:
         tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA']
 
-    # 2. Lista estesa e massiccia di Piazza Affari (Oltre 200 titoli italiani)
     raw_it = [
         'a2a', 'ace', 'amp', 'anim', 'arn', 'azm', 'bami', 'bff', 'bgn', 'bmed', 
         'bpe', 'bre', 'bzu', 'cpr', 'dia', 'eln', 'enel', 'eni', 'erg', 'euc', 
@@ -57,19 +55,17 @@ def get_all_tickers():
         'pirelli', 'poligrafici', 'rcs', 'reply', 'safilo', 'saras', 'sol', 
         'tamburi', 'tiscali', 'tks', 'trevi', 'unipolsai', 'stellantis', 'ferrari', 
         'leonardo', 'generali', 'unicredit', 'intesasanpaolo', 'snam', 'terna', 
-        'italgas', 'recordati', 'inwit', 'bper', 'mps', 'diasorin', 'amp', 'asm', 
-        'avio', 'banca IFIS', 'banca generali', 'banca pop sondrio', 'bem', 'beghelli', 
-        'buonardi', 'carraro', 'cattolica', 'cematal', 'circuito', 'credem', 'd'amico', 
-        'digital bros', 'doValue', 'esprinet', 'eurizon', 'falck renew', 'ferretti', 
-        'fidia', 'fiordi', 'franchetti', 'gamenet', 'gb pako', 'giglio', 'illimity', 
-        'interpump', 'ishares msci', 'italmobiliare', 'la doria', 'lventure', 'marzotto', 
-        'molmed', 'mondadori', 'monrif', 'nyced', 'orsero', 'ovs', 'pininfarina', 
-        'piaggio', 'piazza italia', 'poletti', 'portobello', 'prIMA', 'rae', 'reas', 
-        'reno de medici', 'safe bag', 'sesa', 'seri industrial', 'sev', 'sifi', 'smart', 
-        'snai', 'sol', 'tamburi', 'tas', 'tiscali', 'trevi', 'unipol', 'Valsoia', 
-        'viaro', '威', 'netweek', 'esautomotion', 'faenza', 'giglio group', 'illimity', 
-        'indel b', 'wiit', 'algo', 'acquirenti', 'centrale del latte', 'cofide', 
-        'esprinet', 'falck', 'ima', 'servizi italia', 'tamburi', 'tecnoprint'
+        'italgas', 'recordati', 'inwit', 'bper', 'mps', 'diasorin', 'asm', 
+        'avio', 'banca ifis', 'banca generali', 'banca pop sondrio', 'bem', 'beghelli', 
+        'buonardi', 'carraro', 'cattolica', 'cematal', 'circuito', 'credem', "d'amico", 
+        'digital bros', 'dovalue', 'esprinet', 'eurizon', 'falck renew', 'ferretti', 
+        'fidia', 'fiordi', 'franchetti', 'gamenet', 'giglio', 'illimity', 
+        'interpump', 'italmobiliare', 'la doria', 'lventure', 'marzotto', 
+        'mondadori', 'monrif', 'orsero', 'ovs', 'pininfarina', 
+        'piaggio', 'portobello', 'prima', 'reno de medici', 'safe bag', 'sesa', 'seri industrial', 
+        'snai', 'sol', 'tamburi', 'tas', 'tiscali', 'trevi', 'unipol', 'valsoia', 
+        'netweek', 'esautomotion', 'giglio group', 'illimity', 'indel b', 'wiit', 
+        'centrale del latte', 'cofide', 'esprinet', 'falck', 'servizi italia', 'tecnoprint'
     ]
     
     cleaned = []
