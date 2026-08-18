@@ -1,16 +1,27 @@
+import sys
+import os
+import io
+
+# Reindirizza lo stderr verso stdout per evitare che server.js scambi i messaggi di Yahoo per errori critici
+sys.stderr = sys.stdout
+
 import yfinance as yf
 import pandas as pd
 import json
-import os
 import time
-import io
+import logging
+import warnings
 import urllib.request
 from datetime import datetime
+
+# Disabilita gli avvisi visivi e i log di yfinance
+logging.getLogger('yfinance').setLevel(logging.CRITICAL)
+warnings.filterwarnings('ignore')
 
 DB_FILE = 'market_db.json'
 PROGRESS_FILE = 'progress.json'
 LOG_FILE = 'error_log.txt'
-BATCH_SIZE = 50 
+BATCH_SIZE = 25  # Ridotto per evitare blocchi IP
 
 def update_progress(percent, status, extra_data=None):
     data = {"percent": percent, "status": status}
@@ -33,7 +44,7 @@ def get_all_tickers():
     update_progress(2, "Caricamento elenchi completi USA ed Italia...")
     tickers_us = []
     
-    # 1. MERCATO USA COMPLETO (SEC Registro Ufficiale con User-Agent conforme)
+    # 1. MERCATO USA COMPLETO
     try:
         req = urllib.request.Request(
             'https://www.sec.gov/files/company_tickers.json',
@@ -43,12 +54,11 @@ def get_all_tickers():
             sec_data = json.loads(response.read().decode())
             for item in sec_data.values():
                 symbol = clean_ticker(item['ticker']).replace('.', '-')
-                if symbol:
+                if symbol and not symbol.startswith('$'):
                     tickers_us.append(symbol)
     except Exception as e:
         log_error(f"Errore recupero SEC USA: {e}")
 
-    # Fallback Wikipedia S&P 500 se SEC fallisce
     if not tickers_us:
         try:
             url_sp500 = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
@@ -61,12 +71,12 @@ def get_all_tickers():
                 sp500_df = pd.read_html(io.StringIO(html))[0]
                 tickers_us = [clean_ticker(t).replace('.', '-') for t in sp500_df['Symbol'].tolist()]
         except Exception as e:
-            log_error(f"Errore recupero Wikipedia S&P500: {e}")
+            log_error(f"Errore recupero Wikipedia: {e}")
             tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA']
 
-    # 2. MERCATO ITALIA (Titoli principali Borsa Italiana / FTSE MIB / MidCap / Star)
+    # 2. MERCATO ITALIA
     tickers_it_raw = [
-        'A2A.MI', 'ACE.MI', 'AMP.MI', 'ANIM.MI', 'ARN.MI', 'AZM.MI', 'B3.MI', 'BAMI.MI', 
+        'A2A.MI', 'ACE.MI', 'AMP.MI', 'ANIM.MI', 'ARN.MI', 'AZM.MI', 'BAMI.MI', 
         'BFF.MI', 'BGN.MI', 'BMED.MI', 'BPE.MI', 'BRE.MI', 'BZU.MI', 'CPR.MI', 'DIA.MI', 
         'ELN.MI', 'ENEL.MI', 'ENI.MI', 'ERG.MI', 'EUC.MI', 'FBK.MI', 'FCT.MI', 'G.MI', 
         'GHC.MI', 'IGD.MI', 'INW.MI', 'IP.MI', 'ISP.MI', 'IVG.MI', 'JUVE.MI', 'LDO.MI', 
@@ -89,7 +99,6 @@ def download_data():
             with open(DB_FILE, 'r') as f:
                 market_data = json.load(f)
         except Exception as e:
-            log_error(f"Errore lettura DB esistente: {e}")
             market_data = {}
         period_to_fetch = "5d"
     else:
@@ -100,7 +109,6 @@ def download_data():
     total_tickers = len(ALL_TICKERS)
     
     if total_tickers == 0:
-        log_error("Nessun ticker disponibile per il download.")
         update_progress(100, "Errore: Lista ticker vuota")
         return
 
@@ -113,16 +121,18 @@ def download_data():
             percent = int((processed_count / total_tickers) * 90) + 5
             update_progress(percent, f"Scaricamento blocco ({b_idx + 1}/{total_batches}) - {processed_count}/{total_tickers} titoli...")
 
+            # threads=False per evitare rate limit da Yahoo Finance
             df_batch = yf.download(
                 tickers=batch,
                 period=period_to_fetch,
                 group_by='ticker',
                 auto_adjust=True,
                 progress=False,
-                threads=True
+                threads=False
             )
 
             if df_batch is None or df_batch.empty:
+                time.sleep(1.0)
                 continue
 
             for ticker in batch:
@@ -150,23 +160,20 @@ def download_data():
                         market_data[clean_sym] = old_data
                     else:
                         market_data[clean_sym] = new_data
-                except Exception as e_tick:
-                    log_error(f"Errore estrazione ticker {clean_sym}: {e_tick}")
+                except Exception:
                     continue
 
             with open(DB_FILE, 'w') as f:
                 json.dump(market_data, f)
 
-            time.sleep(0.5)
+            # Pausa precauzionale tra i blocchi
+            time.sleep(1.2)
 
         except Exception as e:
-            err_msg = f"Errore blocco {b_idx + 1}: {e}"
-            print(err_msg)
-            log_error(err_msg)
-            time.sleep(1.0)
+            time.sleep(3.0)
             continue
 
-    # Statistiche finali per il pop-up report
+    # Statistiche finali
     it_count = 0
     us_count = 0
     it_years = []
