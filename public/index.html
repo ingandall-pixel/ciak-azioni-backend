@@ -5,36 +5,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ciak Azioni Dashboard</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; }
+        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9; }
+        
         .error-box { 
             color: #721c24; 
             background-color: #f8d7da; 
             border: 1px solid #f5c6cb; 
             padding: 15px; 
             margin-bottom: 20px; 
-            display: none; 
+            border-radius: 4px;
+            display: none; /* Nascosto di default */
         }
-        .controls { margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+
+        .controls { margin-bottom: 20px; display: flex; gap: 10px; align-items: center; }
+        
+        button { padding: 8px 16px; cursor: pointer; }
+        
+        .container-periodo { margin-top: 20px; margin-bottom: 20px; padding: 20px; border: 1px solid #ddd; background: white; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #333; color: white; }
+        th { background-color: #212529; color: white; }
     </style>
 </head>
 <body>
 
-    <!-- Area per l'errore -->
+    <!-- Box Errore -->
     <div id="errore-box" class="error-box"></div>
 
+    <!-- Pulsanti -->
     <div class="controls">
         <button onclick="caricaDati('italiano')">Mercato Italiano</button>
         <button onclick="caricaDati('americano')">Mercato Americano</button>
-        
-        <label for="periodo">Periodo:</label>
+    </div>
+
+    <!-- Selettore Periodo -->
+    <div class="container-periodo">
+        <label for="periodo"><strong>Periodo:</strong></label>
         <select id="periodo">
             <option value="1">1 Anno</option>
         </select>
     </div>
 
+    <!-- Tabella -->
     <table id="tabella-azioni">
         <thead>
             <tr>
@@ -44,25 +57,31 @@
             </tr>
         </thead>
         <tbody id="corpo-tabella">
-            <!-- I dati verranno inseriti qui -->
+            <!-- I dati verranno inseriti qui dallo script -->
         </tbody>
     </table>
 
     <script>
         async function caricaDati(mercato) {
             const erroreBox = document.getElementById('errore-box');
-            erroreBox.style.display = 'none';
+            erroreBox.style.display = 'none'; // Nascondi errore precedente
 
             try {
-                // Percorso corretto: ../ esce dalla cartella public per trovare il file nella root
-                const response = await fetch('../market_db.json');
+                // Poiché il file è nella stessa cartella (public), il percorso è ./
+                const response = await fetch('./market_db.json');
                 
                 if (!response.ok) {
-                    throw new Error(`Errore HTTP: ${response.status}`);
+                    throw new Error(`Errore nel caricamento del file (Status: ${response.status})`);
                 }
                 
                 const data = await response.json();
-                popolaTabella(data[mercato]);
+                
+                // Verifica che il mercato richiesto esista nel JSON
+                if (data[mercato]) {
+                    popolaTabella(data[mercato]);
+                } else {
+                    throw new Error(`Mercato "${mercato}" non trovato nel file JSON`);
+                }
                 
             } catch (error) {
                 console.error(error);
@@ -73,7 +92,7 @@
 
         function popolaTabella(azioni) {
             const corpo = document.getElementById('corpo-tabella');
-            corpo.innerHTML = ''; // Pulisce la tabella
+            corpo.innerHTML = ''; // Svuota la tabella prima di riempirla
             
             azioni.forEach(item => {
                 const row = `<tr>
