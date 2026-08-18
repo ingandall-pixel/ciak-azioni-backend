@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>CIAK!-AZIONI</title>
+    <title>CIAK! - AZIONI</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
         .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -13,7 +13,6 @@
         button:hover:not(:disabled) { background: #0056b3; }
         button:disabled { background: #6c757d; cursor: not-allowed; opacity: 0.65; }
         .legend { font-size: 12px; color: #666; margin-bottom: 20px; font-style: italic; }
-        .loading { display: none; color: #007bff; font-weight: bold; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { background: #343a40; color: white; padding: 12px; }
         td { padding: 10px; border-bottom: 1px solid #ddd; text-align: center; }
@@ -50,7 +49,7 @@
 <body>
 
 <div class="container">
-    <h2>CIAK!-AZIONI</h2>
+    <h2>CIAK! - AZIONI</h2>
 
     <!-- Sezione Aggiornamento Dati e Barra di Avanzamento Analisi -->
     <div style="margin-bottom: 20px;">
@@ -135,7 +134,6 @@ function avviaAggiornamento() {
     const btn = document.getElementById('btn-analysis');
     btn.disabled = true;
 
-    // Nascondi eventuale box risultati aperto
     document.getElementById('progress-container-results').style.display = 'none';
 
     fetch('/run-update', { method: 'POST' })
@@ -146,7 +144,6 @@ function avviaAggiornamento() {
                     'progress-bar-analysis', 
                     'status-text-analysis', 
                     (finalData) => {
-                        // Pop-up richiesto con i dati formattati a una cifra decimale
                         alert(
                             "Analisi di mercato completata!\n\n" +
                             "• Azioni Italiane popolate: " + (finalData.it_count || 0) + "\n" +
@@ -173,7 +170,6 @@ function caricaRisultati() {
     const bar = document.getElementById('progress-bar-results-fill');
     const text = document.getElementById('status-text-results');
     
-    // Nascondi eventuale box analisi aperto
     document.getElementById('progress-container-analysis').style.display = 'none';
 
     container.style.display = 'block';
@@ -187,7 +183,6 @@ function caricaRisultati() {
         std: document.getElementById('std').value
     };
 
-    // Simulazione o caricamento reale con progress bar fittizia rapida
     let progress = 0;
     const fakeInterval = setInterval(() => {
         progress += 25;
@@ -197,7 +192,6 @@ function caricaRisultati() {
         if (progress >= 100) {
             clearInterval(fakeInterval);
             
-            // Chiamata API effettiva per popolare le tabelle
             fetch('/api/get-results', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
