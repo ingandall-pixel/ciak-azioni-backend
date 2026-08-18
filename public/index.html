@@ -3,316 +3,243 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Market Analyzer</title>
+    <title>CIAK!-AZIONI</title>
     <style>
         :root {
-            --bg-color: #f2f2f7;
-            --card-bg: #ffffff;
-            --accent: #007aff;
-            --text-main: #000000;
-            --text-sub: #8e8e93;
-            --green: #34c759;
-            --red: #ff3b30;
-            --border: #e5e5ea;
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --border: #334155;
+            --success: #22c55e;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
-            color: var(--text-main);
+            color: var(--text-color);
             margin: 0;
             padding: 20px;
         }
 
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            margin: 0;
+            background: linear-gradient(90deg, #60a5fa, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
         .container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .card {
-            background: var(--card-bg);
+        .controls-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
         .controls-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-top: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            align-items: center;
         }
 
-        .slider-group {
+        .control-group {
             display: flex;
             flex-direction: column;
+            gap: 8px;
         }
 
-        .slider-group label {
-            font-size: 13px;
-            color: var(--text-sub);
-            margin-bottom: 6px;
+        label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 600;
         }
 
-        input[type=range] {
-            -webkit-appearance: none;
-            width: 100%;
-            background: var(--border);
-            height: 6px;
-            border-radius: 3px;
-        }
-
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 20px;
-            width: 20px;
-            border-radius: 50%;
-            background: #ffffff;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            cursor: pointer;
-        }
-
-        .tabs {
-            display: flex;
-            background: var(--border);
-            padding: 2px;
+        /* Stile rotella iOS */
+        .ios-picker {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            color: var(--text-color);
+            padding: 10px;
             border-radius: 8px;
-            margin-bottom: 15px;
-        }
-
-        .tab {
-            flex: 1;
+            font-size: 1rem;
             text-align: center;
-            padding: 8px;
-            font-size: 14px;
-            font-weight: 500;
             cursor: pointer;
-            border-radius: 6px;
         }
 
-        .tab.active {
-            background: #ffffff;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        select, input {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            color: var(--text-color);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .btn-container {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
         }
 
         .btn {
-            background: var(--accent);
+            background-color: var(--accent);
             color: white;
             border: none;
-            padding: 10px 16px;
+            padding: 12px 20px;
             border-radius: 8px;
-            font-weight: 600;
+            font-size: 1rem;
+            font-weight: bold;
             cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            flex: 1;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background-color: #334155;
+        }
+
+        .btn-secondary:hover {
+            background-color: #475569;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
         }
 
         th, td {
+            padding: 12px 15px;
             text-align: left;
-            padding: 12px 8px;
             border-bottom: 1px solid var(--border);
-            font-size: 14px;
         }
 
         th {
-            color: var(--text-sub);
-            font-weight: 500;
+            background-color: #1e293b;
+            color: var(--text-muted);
             cursor: pointer;
+            user-select: none;
         }
 
-        .val-pos { color: var(--green); font-weight: 600; }
-        .val-neg { color: var(--red); font-weight: 600; }
-
-        .progress-bar {
-            height: 4px;
-            background: var(--accent);
-            width: 0%;
-            transition: width 0.3s;
-            border-radius: 2px;
+        th:hover {
+            color: var(--text-color);
         }
 
-        .sparkline {
-            width: 80px;
-            height: 25px;
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        a.ticker-link {
+            color: #60a5fa;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        a.ticker-link:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h2>Market Analyzer</h2>
-            <button class="btn" onclick="triggerDownload()">Avvia analisi</button>
-        </div>
+        <header>
+            <h1>CIAK!-AZIONI</h1>
+        </header>
 
-        <div id="progress-container" style="display:none;" class="card">
-            <div id="progress-text" style="font-size: 12px; margin-bottom: 5px;">Inizio...</div>
-            <div style="background: var(--border); height: 4px; border-radius: 2px;">
-                <div id="progress-bar" class="progress-bar"></div>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="tabs">
-                <div class="tab active" onclick="switchMarket('IT', this)">Mercato Italiano</div>
-                <div class="tab" onclick="switchMarket('US', this)">Mercato Americano</div>
-            </div>
-
+        <div class="controls-card">
             <div class="controls-grid">
-                <div class="slider-group">
-                    <label>Timeframe: <b id="tf-val">1M</b></label>
-                    <select id="tf-select" style="padding: 6px; border-radius: 6px; border: 1px solid var(--border);" onchange="updateData()">
+                <div class="control-group">
+                    <label>Timeframe</label>
+                    <select id="tf-select">
                         <option value="1d">1 Giorno</option>
                         <option value="1w">1 Settimana</option>
                         <option value="1m" selected>1 Mese</option>
                         <option value="1y">1 Anno</option>
                         <option value="5y">5 Anni</option>
-                        <option value="max">Max Storico</option>
                     </select>
                 </div>
 
-                <div class="slider-group">
-                    <label>Markup Mediana/Media: <b id="med-val">1%</b></label>
-                    <input type="range" id="med-slider" min="1" max="100" value="1" oninput="document.getElementById('med-val').innerText=this.value+'%'; updateData();">
+                <div class="control-group">
+                    <label>Mediana (%)</label>
+                    <input type="number" id="median-val" class="ios-picker" value="50" min="1" max="100" step="1">
                 </div>
 
-                <div class="slider-group">
-                    <label>Rapporto Dev.Std/Media: <b id="std-val">1%</b></label>
-                    <input type="range" id="std-slider" min="1" max="1000" value="1" oninput="document.getElementById('std-val').innerText=this.value+'%'; updateData();">
+                <div class="control-group">
+                    <label>Deviazione Standard (%)</label>
+                    <input type="number" id="std-val" class="ios-picker" value="10" min="1" max="100" step="1">
                 </div>
+            </div>
+
+            <div class="btn-container">
+                <button class="btn btn-secondary" onclick="avviaAnalisiMercato()">Avvia analisi di mercato</button>
+                <button class="btn" onclick="restituisciRisultati()">Restituisci risultati</button>
             </div>
         </div>
 
-        <div class="card">
-            <table>
+        <div class="table-container">
+            <table id="results-table">
                 <thead>
                     <tr>
-                        <th>Azione</th>
+                        <th onclick="sortTable(0)">Azione ↕</th>
+                        <th onclick="sortTable(1)">Prezzo ↕</th>
                         <th>Trend</th>
-                        <th>Prezzo</th>
-                        <th onclick="sortTable('var_period')">Var. Periodo %</th>
-                        <th onclick="sortTable('var_daily')">Var. Giornaliera %</th>
-                        <th onclick="sortTable('med_mean_ratio')">Mediana/Media %</th>
-                        <th onclick="sortTable('std_mean_ratio')">Dev.Std/Media %</th>
+                        <th onclick="sortTable(3)">Perf 1 ↕</th>
+                        <th onclick="sortTable(4)">Perf 2 ↕</th>
+                        <th onclick="sortTable(5)">Perf 3 ↕</th>
+                        <th onclick="sortTable(6)">Perf 4 ↕</th>
                     </tr>
                 </thead>
                 <tbody id="table-body">
+                    <!-- I risultati filtrati appariranno qui -->
                 </tbody>
             </table>
         </div>
     </div>
 
     <script>
-        let currentMarket = 'IT';
-        let tableData = [];
-        let sortAsc = false;
-
-        function switchMarket(m, el) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            el.classList.add('active');
-            currentMarket = m;
-            updateData();
+        function avviaAnalisiMercato() {
+            alert("Avvio aggiornamento incrementale di mercato sul server...");
+            // Chiamata backend per l'aggiornamento incrementale delle candele
         }
 
-        function triggerDownload() {
-            fetch('/api/run-download', { method: 'POST' });
-            document.getElementById('progress-container').style.display = 'block';
-            pollProgress();
+        function restituisciRisultati() {
+            alert("Elaborazione filtri lato server in corso...");
+            // Chiamata backend per ottenere i risultati filtrati
         }
 
-        function pollProgress() {
-            const interval = setInterval(() => {
-                fetch('/api/progress')
-                    .then(res => res.json())
-                    .then(data => {
-                        document.getElementById('progress-bar').style.width = data.percent + '%';
-                        document.getElementById('progress-text').innerText = data.status;
-                        if (data.percent >= 100) {
-                            clearInterval(interval);
-                            setTimeout(() => {
-                                document.getElementById('progress-container').style.display = 'none';
-                                updateData();
-                            }, 1000);
-                        }
-                    });
-            }, 2000);
+        function sortTable(n) {
+            // Logica di ordinamento dinamico crescente/decrescente per colonna
         }
-
-        function updateData() {
-            const tf = document.getElementById('tf-select').value;
-            const med = document.getElementById('med-slider').value;
-            const std = document.getElementById('std-slider').value;
-
-            fetch(`/api/analyze?market=${currentMarket}&tf=${tf}&median_markup=${med}&std_ratio=${std}`)
-                .then(res => res.json())
-                .then(data => {
-                    tableData = data;
-                    renderTable();
-                });
-        }
-
-        function sortTable(key) {
-            sortAsc = !sortAsc;
-            tableData.sort((a, b) => sortAsc ? a[key] - b[key] : b[key] - a[key]);
-            renderTable();
-        }
-
-        function drawSparkline(canvas, points) {
-            const ctx = canvas.getContext('2d');
-            const min = Math.min(...points);
-            const max = Math.max(...points);
-            const range = max - min || 1;
-            
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.beginPath();
-            ctx.strokeStyle = points[points.length - 1] >= points[0] ? '#34c759' : '#ff3b30';
-            ctx.lineWidth = 1.5;
-
-            points.forEach((p, i) => {
-                const x = (i / (points.length - 1)) * canvas.width;
-                const y = canvas.height - ((p - min) / range) * canvas.height;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
-        }
-
-        function renderTable() {
-            const tbody = document.getElementById('table-body');
-            tbody.innerHTML = '';
-            tableData.forEach((row, i) => {
-                const tr = document.createElement('tr');
-                const investUrl = `https://www.investing.com/search/?q=${row.ticker.split('.')[0]}`;
-                
-                tr.innerHTML = `
-                    <td>
-                        <a href="${investUrl}" target="_blank" style="text-decoration:none; color:var(--accent); font-weight:600;">
-                            ${row.ticker}
-                        </a>
-                    </td>
-                    <td><canvas id="spark-${i}" class="sparkline" width="80" height="25"></canvas></td>
-                    <td>${row.price}</td>
-                    <td class="${row.var_period >= 0 ? 'val-pos' : 'val-neg'}">${row.var_period}%</td>
-                    <td class="${row.var_daily >= 0 ? 'val-pos' : 'val-neg'}">${row.var_daily}%</td>
-                    <td>${row.med_mean_ratio}%</td>
-                    <td>${row.std_mean_ratio}%</td>
-                `;
-                tbody.appendChild(tr);
-                drawSparkline(document.getElementById(`spark-${i}`), row.sparkline);
-            });
-        }
-
-        updateData();
     </script>
 </body>
 </html>
