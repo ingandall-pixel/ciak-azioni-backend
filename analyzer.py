@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_FILE = os.path.join(BASE_DIR, 'market_db.json')
 
-def analyze_market(market_filter="IT", timeframe="1m", min_median=50.0, min_std=10.0):
+def analyze_market(market_filter="ALL", timeframe="1m", min_median=-100.0, min_std=0.0):
     if not os.path.exists(DB_FILE):
         print(json.dumps([]))
         return
@@ -35,12 +35,10 @@ def analyze_market(market_filter="IT", timeframe="1m", min_median=50.0, min_std=
     for ticker, history in market_data.items():
         is_it = ticker.endswith('.MI') or ticker.endswith('.AS')
         
-        # Gestione del filtro di mercato (IT, US o ALL per entrambi)
         if market_filter == "IT" and not is_it:
             continue
         if market_filter == "US" and is_it:
             continue
-        # Se è "ALL", passa senza saltare nulla
 
         if not history or len(history) < 2:
             continue
@@ -91,10 +89,10 @@ def analyze_market(market_filter="IT", timeframe="1m", min_median=50.0, min_std=
     print(json.dumps(results))
 
 if __name__ == "__main__":
-    m_filter = sys.argv[1] if len(sys.argv) > 1 else "IT"
+    m_filter = sys.argv[1] if len(sys.argv) > 1 else "ALL"
     t_frame = sys.argv[2] if len(sys.argv) > 2 else "1m"
-    m_med = float(sys.argv[3]) if len(sys.argv) > 3 else 50.0
-    m_std = float(sys.argv[4]) if len(sys.argv) > 4 else 10.0
+    m_med = float(sys.argv[3]) if len(sys.argv) > 3 else -100.0
+    m_std = float(sys.argv[4]) if len(sys.argv) > 4 else 0.0
 
     if m_filter != "download":
         analyze_market(m_filter, t_frame, m_med, m_std)
