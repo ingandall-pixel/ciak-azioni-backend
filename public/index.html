@@ -16,7 +16,6 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { background: #343a40; color: white; padding: 12px; }
         td { padding: 10px; border-bottom: 1px solid #ddd; text-align: center; }
-        .card-section { margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
     </style>
 </head>
 <body>
@@ -24,53 +23,42 @@
 <div class="container">
     <h2>CIAK!-AZIONI</h2>
 
-    <!-- Sezione Aggiornamento Dati -->
-    <div class="card-section">
-        <h3>Aggiornamento Dati di Mercato</h3>
-        <button onclick="avviaAggiornamento()">Avvia Analisi di Mercato (Download)</button>
+    <!-- Sezione Aggiornamento Dati (Pulsante originale ripristinato) -->
+    <div style="margin-bottom: 20px;">
+        <button onclick="avviaAggiornamento()">Avvia analisi di mercato (Download)</button>
         <div id="loading-update" class="loading">⏳ Download e aggiornamento dati in corso, attendere...</div>
     </div>
 
-    <!-- Sezione Filtri -->
-    <div class="card-section">
-        <h3>Filtri e Ricerca</h3>
-        <div class="controls">
-            <select id="market">
-                <option value="ALL">Tutti i mercati</option>
-                <option value="IT">Italia</option>
-                <option value="US">USA</option>
-            </select>
-            <select id="timeframe">
-                <option value="1w">1 Settimana</option>
-                <option value="1m" selected>1 Mese</option>
-                <option value="3m">3 Mesi</option>
-                <option value="6m">6 Mesi</option>
-                <option value="1y">1 Anno</option>
-            </select>
-            <input type="number" id="median" value="50" min="-100" max="100" step="1" placeholder="Min Mediana %">
-            <input type="number" id="std" value="10" min="0" max="1000" step="1" placeholder="Min Std %">
-            <button onclick="caricaRisultati()">Analizza</button>
-        </div>
-        <div class="legend">
-            * <strong>Legenda Limiti:</strong> 
-            Mediana / Media (Minimo inseribile: -100%, Massimo: +100%). 
-            Deviazione Std / Media (Minimo inseribile: 0%, Massimo: 1000%). 
-            I filtri agiscono come limiti minimi inferiori ($\ge$).
-        </div>
-        <div id="loading-results" class="loading">⏳ Elaborazione risultati in corso...</div>
+    <div class="controls">
+        <select id="market"><option value="ALL">Tutti i mercati</option><option value="IT">Italia</option><option value="US">USA</option></select>
+        <select id="timeframe">
+            <option value="1w">1 Settimana</option><option value="1m" selected>1 Mese</option>
+            <option value="3m">3 Mesi</option><option value="6m">6 Mesi</option>
+            <option value="1y">1 Anno</option>
+        </select>
+        <input type="number" id="median" value="50" min="-100" max="100" placeholder="Min Mediana %">
+        <input type="number" id="std" value="10" min="0" max="1000" placeholder="Min Std %">
+        <button onclick="caricaRisultati()">Analizza</button>
     </div>
+    
+    <div class="legend">
+        * <strong>Legenda Limiti:</strong> 
+        Mediana / Media (Min: -100%, Max: +100%). 
+        Deviazione Std / Media (Min: 0%, Max: 1000%). 
+        I filtri agiscono come limiti minimi inferiori ($\ge$).
+    </div>
+    <div id="loading-results" class="loading">⏳ Elaborazione risultati in corso...</div>
 
-    <!-- Tabelle Risultati -->
     <h3>🇮🇹 Azioni Italiane</h3>
     <table id="table-it">
         <thead><tr><th>Ticker</th><th>Prezzo</th><th>Var. Periodo</th><th>Var. Giorn.</th><th>Mediana/Media</th><th>Dev.Std/Media</th><th>Link</th></tr></thead>
-        <tbody id="body-it"><tr><td colspan="7">Nessun dato caricato.</td></tr></tbody>
+        <tbody id="body-it"></tbody>
     </table>
 
-    <h3 style="margin-top: 30px;">🇺🇸 Azioni Americane</h3>
+    <h3>🇺🇸 Azioni Americane</h3>
     <table id="table-us">
         <thead><tr><th>Ticker</th><th>Prezzo</th><th>Var. Periodo</th><th>Var. Giorn.</th><th>Mediana/Media</th><th>Dev.Std/Media</th><th>Link</th></tr></thead>
-        <tbody id="body-us"><tr><td colspan="7">Nessun dato caricato.</td></tr></tbody>
+        <tbody id="body-us"></tbody>
     </table>
 </div>
 
@@ -112,17 +100,13 @@ function caricaRisultati() {
         loader.style.display = 'none';
         const bodyIt = document.getElementById('body-it');
         const bodyUs = document.getElementById('body-us');
-        bodyIt.innerHTML = ''; 
-        bodyUs.innerHTML = '';
+        bodyIt.innerHTML = ''; bodyUs.innerHTML = '';
 
         if (!data || data.length === 0) {
             bodyIt.innerHTML = `<tr><td colspan="7">Nessun risultato trovato.</td></tr>`;
             bodyUs.innerHTML = `<tr><td colspan="7">Nessun risultato trovato.</td></tr>`;
             return;
         }
-
-        let countIt = 0;
-        let countUs = 0;
 
         data.forEach(item => {
             const row = `<tr>
@@ -137,15 +121,10 @@ function caricaRisultati() {
             
             if (item.ticker.endsWith('.MI') || item.ticker.endsWith('.AS')) {
                 bodyIt.innerHTML += row;
-                countIt++;
             } else {
                 bodyUs.innerHTML += row;
-                countUs++;
             }
         });
-
-        if (countIt === 0) bodyIt.innerHTML = `<tr><td colspan="7">Nessuna azione italiana trovata.</td></tr>`;
-        if (countUs === 0) bodyUs.innerHTML = `<tr><td colspan="7">Nessuna azione americana trovata.</td></tr>`;
     })
     .catch(err => {
         loader.style.display = 'none';
