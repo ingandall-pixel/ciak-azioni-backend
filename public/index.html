@@ -4,29 +4,29 @@
     <meta charset="UTF-8">
     <title>Analisi di Mercato</title>
 </head>
-<body style="font-family: Arial, sans-serif; margin: 40px;">
+<body>
 
     <h1>Dashboard Finanziaria</h1>
 
     <!-- Pulsanti di azione -->
-    <div style="margin: 20px 0;">
-        <button id="btn-analysis" onclick="startAnalysis()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">Avvia analisi di mercato</button>
-        <button id="btn-results" onclick="fetchResults()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; margin-left: 10px;">Restituisci risultati</button>
+    <div>
+        <button id="btn-analysis" onclick="startAnalysis()">Avvia analisi di mercato</button>
+        <button id="btn-results" onclick="fetchResults()">Restituisci risultati</button>
     </div>
 
     <!-- Barra di avanzamento per l'Analisi -->
-    <div id="progress-container-analysis" style="display: none; margin-top: 15px; width: 350px;">
-        <p id="status-text-analysis" style="margin: 0 0 5px 0; font-size: 14px;">Preparazione analisi...</p>
-        <div style="width: 100%; background-color: #f3f3f3; border-radius: 4px; overflow: hidden; border: 1px solid #ccc;">
-            <div id="progress-bar-analysis" style="width: 0%; height: 22px; background-color: #4CAF50; transition: width 0.3s;"></div>
+    <div id="progress-container-analysis" style="display: none; margin-top: 15px;">
+        <p id="status-text-analysis">Preparazione analisi...</p>
+        <div style="width: 100%; background-color: #f3f3f3; border-radius: 4px; overflow: hidden;">
+            <div id="progress-bar-analysis" style="width: 0%; height: 20px; background-color: #4CAF50; transition: width 0.3s;"></div>
         </div>
     </div>
 
     <!-- Barra di avanzamento per i Risultati -->
-    <div id="progress-container-results" style="display: none; margin-top: 15px; width: 350px;">
-        <p id="status-text-results" style="margin: 0 0 5px 0; font-size: 14px;">Caricamento risultati...</p>
-        <div style="width: 100%; background-color: #f3f3f3; border-radius: 4px; overflow: hidden; border: 1px solid #ccc;">
-            <div id="progress-bar-results" style="width: 0%; height: 22px; background-color: #2196F3; transition: width 0.3s;"></div>
+    <div id="progress-container-results" style="display: none; margin-top: 15px;">
+        <p id="status-text-results">Caricamento risultati...</p>
+        <div style="width: 100%; background-color: #f3f3f3; border-radius: 4px; overflow: hidden;">
+            <div id="progress-bar-results" style="width: 0%; height: 20px; background-color: #2196F3; transition: width 0.3s;"></div>
         </div>
     </div>
 
@@ -39,7 +39,7 @@
             container.style.display = "block";
             
             const interval = setInterval(() => {
-                fetch('/../progress.json?' + new Date().getTime())
+                fetch('/progress.json?' + new Date().getTime())
                     .then(response => response.json())
                     .then(data => {
                         const percent = data.percent || 0;
@@ -69,7 +69,6 @@
                             'progress-bar-analysis', 
                             'status-text-analysis', 
                             (finalData) => {
-                                // Pop-up da chiudere manualmente con i dati richiesti
                                 alert(
                                     "Analisi di mercato completata!\n\n" +
                                     "• Azioni Italiane popolate: " + (finalData.it_count || 0) + "\n" +
@@ -95,7 +94,7 @@
             
             container.style.display = "block";
             bar.style.width = "0%";
-            text.innerText = "Lettura database in corso...";
+            text.innerText = "Elaborazione risultati...";
 
             let progress = 0;
             const fakeInterval = setInterval(() => {
