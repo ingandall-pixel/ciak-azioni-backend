@@ -41,7 +41,6 @@ def get_all_tickers():
     except Exception:
         tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA']
 
-    # Lista pulita e verificata dei ticker italiani su Stooq
     tickers_it = [
         'enel.it', 'eni.it', 'isp.it', 'ucg.it', 'stm.it', 'generali.it', 
         'ferrari.it', 'stellantis.it', 'leonardo.it', 'snam.it', 'terna.it', 
@@ -99,7 +98,8 @@ def download_data():
         if idx % 50 == 0:
             update_progress(percent, f"Scaricamento ({idx}/{total}) tramite Stooq...")
 
-        s_symbol = ticker if ticker.endswith('.it') else f"{ticker.us}"
+        # CORRETTO QUI: .us fuori dalle parentesi graffe
+        s_symbol = ticker if market_type == 'it' else f"{ticker}.us"
 
         history = download_stooq_data(s_symbol)
         if history:
