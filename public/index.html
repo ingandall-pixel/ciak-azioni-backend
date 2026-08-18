@@ -2,135 +2,113 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>CIAK!-AZIONI</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
-        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h2 { border-left: 5px solid #007bff; padding-left: 10px; color: #333; }
-        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 10px; }
-        select, input, button { padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
-        button { background: #007bff; color: white; cursor: pointer; border: none; font-weight: bold; }
-        button:hover { background: #0056b3; }
-        .legend { font-size: 12px; color: #666; margin-bottom: 20px; font-style: italic; }
-        .loading { display: none; color: #007bff; font-weight: bold; margin-top: 10px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { background: #343a40; color: white; padding: 12px; }
-        td { padding: 10px; border-bottom: 1px solid #ddd; text-align: center; }
-    </style>
+    <title>Analisi di Mercato</title>
 </head>
-<body>
+<body style="font-family: Arial, sans-serif; margin: 40px;">
 
-<div class="container">
-    <h2>CIAK!-AZIONI</h2>
+    <h1>Dashboard Finanziaria</h1>
 
-    <!-- Sezione Aggiornamento Dati -->
-    <div style="margin-bottom: 20px;">
-        <button onclick="avviaAggiornamento()">Avvia analisi di mercato (Download)</button>
-        <div id="loading-update" class="loading">⏳ Download e aggiornamento dati in corso, attendere...</div>
+    <!-- Pulsanti di azione -->
+    <div style="margin: 20px 0;">
+        <button id="btn-analysis" onclick="startAnalysis()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">Avvia analisi di mercato</button>
+        <button id="btn-results" onclick="fetchResults()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; margin-left: 10px;">Restituisci risultati</button>
     </div>
 
-    <div class="controls">
-        <select id="market"><option value="ALL">Tutti i mercati</option><option value="IT">Italia</option><option value="US">USA</option></select>
-        <select id="timeframe">
-            <option value="1w">1 Settimana</option><option value="1m" selected>1 Mese</option>
-            <option value="3m">3 Mesi</option><option value="6m">6 Mesi</option>
-            <option value="1y">1 Anno</option>
-        </select>
-        <input type="number" id="median" value="50" min="-100" max="100" placeholder="Min Mediana %">
-        <input type="number" id="std" value="10" min="0" max="1000" placeholder="Min Std %">
-        <button onclick="caricaRisultati()">Restituisci risultati</button>
+    <!-- Barra di avanzamento per l'Analisi -->
+    <div id="progress-container-analysis" style="display: none; margin-top: 15px; width: 350px;">
+        <p id="status-text-analysis" style="margin: 0 0 5px 0; font-size: 14px;">Preparazione analisi...</p>
+        <div style="width: 100%; background-color: #f3f3f3; border-radius: 4px; overflow: hidden; border: 1px solid #ccc;">
+            <div id="progress-bar-analysis" style="width: 0%; height: 22px; background-color: #4CAF50; transition: width 0.3s;"></div>
+        </div>
     </div>
-    
-    <div class="legend">
-        * <strong>Legenda Limiti:</strong> 
-        Mediana / Media (Min: -100%, Max: +100%). 
-        Deviazione Std / Media (Min: 0%, Max: 1000%). 
-        I filtri agiscono come limiti minimi inferiori ($\ge$).
+
+    <!-- Barra di avanzamento per i Risultati -->
+    <div id="progress-container-results" style="display: none; margin-top: 15px; width: 350px;">
+        <p id="status-text-results" style="margin: 0 0 5px 0; font-size: 14px;">Caricamento risultati...</p>
+        <div style="width: 100%; background-color: #f3f3f3; border-radius: 4px; overflow: hidden; border: 1px solid #ccc;">
+            <div id="progress-bar-results" style="width: 0%; height: 22px; background-color: #2196F3; transition: width 0.3s;"></div>
+        </div>
     </div>
-    <div id="loading-results" class="loading">⏳ Elaborazione risultati in corso...</div>
 
-    <h3>🇮🇹 Azioni Italiane</h3>
-    <table id="table-it">
-        <thead><tr><th>Ticker</th><th>Prezzo</th><th>Var. Periodo</th><th>Var. Giorn.</th><th>Mediana/Media</th><th>Dev.Std/Media</th><th>Link</th></tr></thead>
-        <tbody id="body-it"></tbody>
-    </table>
-
-    <h3>🇺🇸 Azioni Americane</h3>
-    <table id="table-us">
-        <thead><tr><th>Ticker</th><th>Prezzo</th><th>Var. Periodo</th><th>Var. Giorn.</th><th>Mediana/Media</th><th>Dev.Std/Media</th><th>Link</th></tr></thead>
-        <tbody id="body-us"></tbody>
-    </table>
-</div>
-
-<script>
-function avviaAggiornamento() {
-    const loader = document.getElementById('loading-update');
-    loader.style.display = 'block';
-
-    fetch('/api/update-market', { method: 'POST' })
-        .then(res => res.json())
-        .then(data => {
-            alert(data.message || "Aggiornamento avviato con successo!");
-            loader.style.display = 'none';
-        })
-        .catch(err => {
-            alert("Errore durante l'aggiornamento.");
-            loader.style.display = 'none';
-        });
-}
-
-function caricaRisultati() {
-    const loader = document.getElementById('loading-results');
-    loader.style.display = 'block';
-
-    const params = {
-        market: document.getElementById('market').value,
-        timeframe: document.getElementById('timeframe').value,
-        median: document.getElementById('median').value,
-        std: document.getElementById('std').value
-    };
-
-    fetch('/api/get-results', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params)
-    })
-    .then(res => res.json())
-    .then(data => {
-        loader.style.display = 'none';
-        const bodyIt = document.getElementById('body-it');
-        const bodyUs = document.getElementById('body-us');
-        bodyIt.innerHTML = ''; bodyUs.innerHTML = '';
-
-        if (!data || data.length === 0) {
-            bodyIt.innerHTML = `<tr><td colspan="7">Nessun risultato trovato.</td></tr>`;
-            bodyUs.innerHTML = `<tr><td colspan="7">Nessun risultato trovato.</td></tr>`;
-            return;
+    <script>
+        function pollProgress(containerId, barId, textId, onComplete) {
+            const container = document.getElementById(containerId);
+            const bar = document.getElementById(barId);
+            const text = document.getElementById(textId);
+            
+            container.style.display = "block";
+            
+            const interval = setInterval(() => {
+                fetch('/../progress.json?' + new Date().getTime())
+                    .then(response => response.json())
+                    .then(data => {
+                        const percent = data.percent || 0;
+                        bar.style.width = percent + "%";
+                        text.innerText = data.status || `Progresso: ${percent}%`;
+                        
+                        if (percent >= 100) {
+                            clearInterval(interval);
+                            if (onComplete) onComplete(data);
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Lettura progresso in corso...", err);
+                    });
+            }, 1000);
         }
 
-        data.forEach(item => {
-            const row = `<tr>
-                <td>${item.ticker}</td>
-                <td>${item.price}</td>
-                <td>${item.var_period}%</td>
-                <td>${item.var_daily}%</td>
-                <td>${item.med_mean_ratio}%</td>
-                <td>${item.std_mean_ratio}%</td>
-                <td><a href="https://it.investing.com/search/?q=${item.ticker.split('.')[0]}" target="_blank">Vai</a></td>
-            </tr>`;
+        function startAnalysis() {
+            const btn = document.getElementById('btn-analysis');
+            btn.disabled = true;
             
-            if (item.ticker.endsWith('.MI') || item.ticker.endsWith('.AS')) {
-                bodyIt.innerHTML += row;
-            } else {
-                bodyUs.innerHTML += row;
-            }
-        });
-    })
-    .catch(err => {
-        loader.style.display = 'none';
-        console.error(err);
-    });
-}
-</script>
+            fetch('/run-update', { method: 'POST' })
+                .then(response => {
+                    if (response.ok) {
+                        pollProgress(
+                            'progress-container-analysis', 
+                            'progress-bar-analysis', 
+                            'status-text-analysis', 
+                            (finalData) => {
+                                // Pop-up da chiudere manualmente con i dati richiesti
+                                alert(
+                                    "Analisi di mercato completata!\n\n" +
+                                    "• Azioni Italiane popolate: " + (finalData.it_count || 0) + "\n" +
+                                    "  Media anni di popolamento: " + (finalData.it_avg_years !== undefined ? finalData.it_avg_years.toFixed(1) : "0.0") + " anni\n\n" +
+                                    "• Azioni Americane popolate: " + (finalData.us_count || 0) + "\n" +
+                                    "  Media anni di popolamento: " + (finalData.us_avg_years !== undefined ? finalData.us_avg_years.toFixed(1) : "0.0") + " anni"
+                                );
+                                btn.disabled = false;
+                            }
+                        );
+                    }
+                })
+                .catch(err => {
+                    alert("Errore di connessione al server");
+                    btn.disabled = false;
+                });
+        }
+
+        function fetchResults() {
+            const container = document.getElementById('progress-container-results');
+            const bar = document.getElementById('progress-bar-results');
+            const text = document.getElementById('status-text-results');
+            
+            container.style.display = "block";
+            bar.style.width = "0%";
+            text.innerText = "Lettura database in corso...";
+
+            let progress = 0;
+            const fakeInterval = setInterval(() => {
+                progress += 25;
+                bar.style.width = progress + "%";
+                text.innerText = `Elaborazione risultati... ${progress}%`;
+                
+                if (progress >= 100) {
+                    clearInterval(fakeInterval);
+                    text.innerText = "Risultati pronti!";
+                }
+            }, 300);
+        }
+    </script>
 </body>
 </html>
