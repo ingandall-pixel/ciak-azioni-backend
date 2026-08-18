@@ -16,6 +16,13 @@
             max-width: 1200px;
             margin: auto;
         }
+        h1 {
+            font-size: 26px;
+            color: #111;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
         .nav-buttons {
             margin-bottom: 20px;
         }
@@ -38,7 +45,7 @@
             font-weight: bold;
         }
         select {
-            padding: 4px 8px;
+            padding: 6px 10px;
             border-radius: 4px;
             border: 1px solid #ccc;
         }
@@ -76,19 +83,24 @@
 </head>
 <body>
     <div class="container">
+        <!-- Titolo principale richiesto -->
+        <h1>CIAK! - AZIONI</h1>
+
         <!-- Pulsanti Mercati -->
         <div class="nav-buttons">
             <button id="btn-it" class="active" onclick="switchMarket('IT')">Mercato Italiano</button>
             <button id="btn-us" onclick="switchMarket('US')">Mercato Americano</button>
         </div>
 
-        <!-- Selettore Periodo -->
+        <!-- Selettore Periodo aggiornato -->
         <div class="controls">
             <label for="period-select">Periodo: </label>
             <select id="period-select" onchange="renderTable()">
-                <option value="1">1 Anno</option>
-                <option value="0.5">6 Mesi</option>
-                <option value="0.25">3 Mesi</option>
+                <option value="1d">1 Giorno</option>
+                <option value="1w">1 Settimana</option>
+                <option value="1m">1 Mese</option>
+                <option value="1y" selected>1 Anno</option>
+                <option value="5y">5 Anni</option>
                 <option value="all">Massimo</option>
             </select>
         </div>
@@ -127,7 +139,7 @@
                 })
                 .catch(err => {
                     console.error('Errore nel recupero dati:', err);
-                    document.getElementById('table-body').innerHTML = `<tr><td colspan="3" style="color:red; text-align:center;">Errore di caricamento dal server. Il database potrebbe essere vuoto.</td></tr>`;
+                    document.getElementById('table-body').innerHTML = `<tr><td colspan="3" style="color:red; text-align:center;">Errore di caricamento dal server.</td></tr>`;
                 });
         }
 
@@ -142,7 +154,7 @@
             const tbody = document.getElementById('table-body');
             tbody.innerHTML = '';
 
-            // Filtra per mercato corrente (IT o US)
+            const selectedPeriod = document.getElementById('period-select').value;
             const filtered = allData.filter(item => item.market === currentMarket);
 
             if (filtered.length === 0) {
@@ -153,19 +165,21 @@
             filtered.forEach(item => {
                 const tr = document.createElement('tr');
                 
-                const varClass = item.total_return_pct >= 0 ? 'positive' : 'negative';
-                const sign = item.total_return_pct >= 0 ? '+' : '';
+                const returns = item.returns || {};
+                const varValue = returns[selectedPeriod] !== undefined ? returns[selectedPeriod] : 0;
+                
+                const varClass = varValue >= 0 ? 'positive' : 'negative';
+                const sign = varValue >= 0 ? '+' : '';
 
                 tr.innerHTML = `
                     <td>${item.ticker}</td>
-                    <td>${item.current_price.toFixed(2)} € / $</td>
-                    <td class="${varClass}">${sign}${item.total_return_pct}%</td>
+                    <td>${item.current_price.toFixed(2)}</td>
+                    <td class="${varClass}">${sign}${varValue}%</td>
                 `;
                 tbody.appendChild(tr);
             });
         }
 
-        // Avvia il caricamento all'avvio della pagina
         loadData();
     </script>
 </body>
