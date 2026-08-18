@@ -2,31 +2,154 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Analisi di Mercato</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisi di Mercato Finanziario</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --success-color: #10b981;
+            --info-color: #3b82f6;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-top: 0;
+            margin-bottom: 24px;
+            text-align: center;
+            color: var(--text-main);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background-color: var(--text-muted);
+            cursor: not-allowed;
+            opacity: 0.7;
+            box-shadow: none;
+        }
+
+        .progress-wrapper {
+            display: none;
+            margin-top: 20px;
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .progress-wrapper p {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            background-color: #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            height: 14px;
+        }
+
+        .progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            transition: width 0.3s ease;
+            border-radius: 6px;
+        }
+
+        #progress-bar-analysis {
+            background-color: var(--success-color);
+        }
+
+        #progress-bar-results {
+            background-color: var(--info-color);
+        }
+    </style>
 </head>
 <body>
 
-    <h1>Dashboard Finanziaria</h1>
+    <div class="container">
+        <h1>Dashboard Analisi di Mercato</h1>
 
-    <!-- Pulsanti di azione -->
-    <div>
-        <button id="btn-analysis" onclick="startAnalysis()">Avvia analisi di mercato</button>
-        <button id="btn-results" onclick="fetchResults()">Restituisci risultati</button>
-    </div>
-
-    <!-- Barra di avanzamento per l'Analisi -->
-    <div id="progress-container-analysis" style="display: none; margin-top: 15px;">
-        <p id="status-text-analysis">Preparazione analisi...</p>
-        <div style="width: 100%; background-color: #f3f3f3; border-radius: 4px; overflow: hidden;">
-            <div id="progress-bar-analysis" style="width: 0%; height: 20px; background-color: #4CAF50; transition: width 0.3s;"></div>
+        <!-- Pulsanti di azione -->
+        <div class="button-group">
+            <button id="btn-analysis" onclick="startAnalysis()">Avvia analisi di mercato</button>
+            <button id="btn-results" onclick="fetchResults()">Restituisci risultati</button>
         </div>
-    </div>
 
-    <!-- Barra di avanzamento per i Risultati -->
-    <div id="progress-container-results" style="display: none; margin-top: 15px;">
-        <p id="status-text-results">Caricamento risultati...</p>
-        <div style="width: 100%; background-color: #f3f3f3; border-radius: 4px; overflow: hidden;">
-            <div id="progress-bar-results" style="width: 0%; height: 20px; background-color: #2196F3; transition: width 0.3s;"></div>
+        <!-- Sezione Barra di Avanzamento: Analisi -->
+        <div id="progress-container-analysis" class="progress-wrapper">
+            <p id="status-text-analysis">Preparazione analisi...</p>
+            <div class="progress-bar-bg">
+                <div id="progress-bar-analysis" class="progress-bar-fill"></div>
+            </div>
+        </div>
+
+        <!-- Sezione Barra di Avanzamento: Risultati -->
+        <div id="progress-container-results" class="progress-wrapper">
+            <p id="status-text-results">Caricamento risultati...</p>
+            <div class="progress-bar-bg">
+                <div id="progress-bar-results" class="progress-bar-fill"></div>
+            </div>
         </div>
     </div>
 
@@ -61,6 +184,9 @@
             const btn = document.getElementById('btn-analysis');
             btn.disabled = true;
             
+            // Nascondi eventuale box risultati precedente se aperto
+            document.getElementById('progress-container-results').style.display = "none";
+
             fetch('/run-update', { method: 'POST' })
                 .then(response => {
                     if (response.ok) {
@@ -69,6 +195,7 @@
                             'progress-bar-analysis', 
                             'status-text-analysis', 
                             (finalData) => {
+                                // Pop-up richiesto con i dati formattati a una cifra decimale
                                 alert(
                                     "Analisi di mercato completata!\n\n" +
                                     "• Azioni Italiane popolate: " + (finalData.it_count || 0) + "\n" +
@@ -92,19 +219,22 @@
             const bar = document.getElementById('progress-bar-results');
             const text = document.getElementById('status-text-results');
             
+            // Nascondi eventuale box analisi precedente se aperto
+            document.getElementById('progress-container-analysis').style.display = "none";
+
             container.style.display = "block";
             bar.style.width = "0%";
-            text.innerText = "Elaborazione risultati...";
+            text.innerText = "Elaborazione risultati in corso...";
 
             let progress = 0;
             const fakeInterval = setInterval(() => {
                 progress += 25;
                 bar.style.width = progress + "%";
-                text.innerText = `Elaborazione risultati... ${progress}%`;
+                text.innerText = `Caricamento risultati... ${progress}%`;
                 
                 if (progress >= 100) {
                     clearInterval(fakeInterval);
-                    text.innerText = "Risultati pronti!";
+                    text.innerText = "Risultati pronti con successo!";
                 }
             }, 300);
         }
