@@ -2,7 +2,6 @@ import json
 import time
 import yfinance as yf
 
-# Lista dei titoli da monitorare
 MERCATO_ITA = [
     {"ticker": "ENEL.MI", "nome": "Enel"},
     {"ticker": "ISP.MI", "nome": "Intesa Sanpaolo"},
@@ -15,7 +14,7 @@ MERCATO_USA = [
     {"ticker": "NVDA", "nome": "NVIDIA"}
 ]
 
-def recupera_dati_ticker(ticker_symbol):
+def recupera_dati(ticker_symbol):
     try:
         ticker = yf.Ticker(ticker_symbol)
         hist = ticker.history(period="1y")
@@ -40,33 +39,30 @@ def aggiorna_db():
 
     print("Recupero dati Mercato Italiano...")
     for item in MERCATO_ITA:
-        dati = recupera_dati_ticker(item["ticker"])
+        dati = recupera_dati(item["ticker"])
         if dati:
             database["italiano"].append({
                 "azione": item["nome"],
                 "prezzo": dati["prezzo"],
                 "var_periodo": dati["var_periodo"]
             })
-        print(f"Caricato {item['nome']}. Pausa di 1 secondo...")
-        time.sleep(1)  # PAUSA DI 1 SECONDO TRA LE CHIAMATE API
+        time.sleep(1)  # Pausa di 1 secondo tra le chiamate
 
     print("Recupero dati Mercato Americano...")
     for item in MERCATO_USA:
-        dati = recupera_dati_ticker(item["ticker"])
+        dati = recupera_dati(item["ticker"])
         if dati:
             database["americano"].append({
                 "azione": item["nome"],
                 "prezzo": dati["prezzo"],
                 "var_periodo": dati["var_periodo"]
             })
-        print(f"Caricato {item['nome']}. Pausa di 1 secondo...")
-        time.sleep(1)  # PAUSA DI 1 SECONDO TRA LE CHIAMATE API
+        time.sleep(1)  # Pausa di 1 secondo tra le chiamate
 
-    # Salvataggio nel file JSON locale
     with open("market_db.json", "w", encoding="utf-8") as f:
         json.dump(database, f, indent=2, ensure_ascii=False)
         
-    print("File market_db.json aggiornato con successo!")
+    print("File market_db.json aggiornato!")
 
 if __name__ == "__main__":
     aggiorna_db()
