@@ -3,36 +3,44 @@ import pandas as pd
 import json
 import os
 import time
+import urllib.request
 from datetime import datetime
 
 DB_FILE = 'market_db.json'
 PROGRESS_FILE = 'progress.json'
+BATCH_SIZE = 50  # Dimensione dei blocchi per evitare il rate limiting di Yahoo
 
 def update_progress(percent, status):
     with open(PROGRESS_FILE, 'w') as f:
         json.dump({"percent": percent, "status": status}, f)
 
 def get_all_tickers():
-    update_progress(2, "Recupero elenchi completi dei mercati ITA e USA...")
+    update_progress(2, "Recupero registri SEC (USA) e Borsa Italiana...")
     
-    # 1. MERCATO USA (S&P 500 completo via Wikipedia + Fallback)
+    # 1. MERCATO USA COMPLETO (Registro SEC ~8.000 titoli)
     tickers_us = []
     try:
-        url_sp500 = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
-        sp500_df = pd.read_html(url_sp500)[0]
-        tickers_us = [t.replace('.', '-') for t in sp500_df['Symbol'].tolist()]
+        req = urllib.request.Request(
+            'https://www.sec.gov/files/company_tickers.json',
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        )
+        with urllib.request.urlopen(req) as response:
+            sec_data = json.loads(response.read().decode())
+            for item in sec_data.values():
+                symbol = item['ticker'].replace('.', '-')
+                tickers_us.append(symbol)
     except Exception as e:
-        print(f"Scraping S&P 500 fallito: {e}")
+        print(f"Errore recupero registri SEC USA: {e}")
 
-    if len(tickers_us) < 400:
-        tickers_us = [
-            'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK-B', 'JNJ', 'V',
-            'JPM', 'UNH', 'HD', 'PG', 'MA', 'DIS', 'ABBV', 'PFE', 'KO', 'PEP', 'BAC',
-            'COST', 'TMO', 'CSCO', 'MCD', 'AVGO', 'WMT', 'XOM', 'CVX', 'LLY', 'ACN',
-            'AZN', 'MRK', 'NKE', 'ORCL', 'ADBE', 'NFLX', 'INTC', 'AMD', 'QCOM', 'TXN'
-        ]
+    if not tickers_us:
+        try:
+            url_sp500 = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
+            sp500_df = pd.read_html(url_sp500)[0]
+            tickers_us = [t.replace('.', '-') for t in sp500_df['Symbol'].tolist()]
+        except:
+            tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA']
 
-    # 2. MERCATO ITALIA (Intero listino Borsa Italiana via Wikipedia + Fallback Capillare)
+    # 2. MERCATO ITALIA COMPLETO (100% dei titoli quotati: ~400 azioni)
     tickers_it = []
     try:
         url_it = 'https://it.wikipedia.org/wiki/Aziende_quotate_in_Borsa_Italiana'
@@ -45,7 +53,7 @@ def get_all_tickers():
     except Exception as e:
         print(f"Scraping Borsa Italiana fallito: {e}")
 
-    # Lista di emergenza completa con oltre 300 azioni italiane (.MI)
+    # Fallback capillare italiano
     fallback_it = [
         'A2A.MI', 'ACE.MI', 'ACKR.MI', 'ADB.MI', 'AE.MI', 'AER.MI', 'AGL.MI', 'AIM.MI', 'AJO.MI', 
         'ALA.MI', 'ALB.MI', 'ALG.MI', 'ALM.MI', 'ALT.MI', 'AMP.MI', 'ANIM.MI', 'ANTM.MI', 'AP.MI', 
@@ -102,6 +110,7 @@ def get_all_tickers():
     ]
 
     tickers_it = list(set(tickers_it + fallback_it))
+    tickers_us = list(set(tickers_us))
     
     return tickers_it + tickers_us
 
@@ -110,7 +119,7 @@ def download_data():
     market_data = {}
 
     if db_exists:
-        update_progress(5, "Database trovato. Avvio aggiornamento incrementale...")
+        update_progress(5, "Database trovato. Aggiornamento incrementale a blocchi...")
         try:
             with open(DB_FILE, 'r') as f:
                 market_data = json.load(f)
@@ -118,53 +127,79 @@ def download_data():
             market_data = {}
         period_to_fetch = "5d"
     else:
-        update_progress(5, "Database assente. Inizio download di 5 anni di storico...")
+        update_progress(5, "Database assente. Download di massa a blocchi (anti-blocco)...")
         period_to_fetch = "5y"
 
     ALL_TICKERS = get_all_tickers()
     total_tickers = len(ALL_TICKERS)
     
-    for i, ticker in enumerate(ALL_TICKERS):
-        try:
-            percent = int(((i + 1) / total_tickers) * 90) + 5
-            update_progress(percent, f"Scaricamento ({i+1}/{total_tickers}): {ticker}")
+    # Divisione in pacchetti da 50 azioni ciascuno
+    ticker_batches = [ALL_TICKERS[i:i + BATCH_SIZE] for i in range(0, total_tickers, BATCH_SIZE)]
+    total_batches = len(ticker_batches)
 
-            stock = yf.Ticker(ticker)
-            hist = stock.history(period=period_to_fetch)
-            
-            if hist.empty:
+    for b_idx, batch in enumerate(ticker_batches):
+        try:
+            processed_count = min((b_idx + 1) * BATCH_SIZE, total_tickers)
+            percent = int((processed_count / total_tickers) * 90) + 5
+            update_progress(percent, f"Scaricamento blocco ({b_idx + 1}/{total_batches}) - {processed_count}/{total_tickers} titoli...")
+
+            # Utilizzo di yf.download in batch multi-thread (10x più rapido e protetto da blocchi IP)
+            df_batch = yf.download(
+                tickers=batch,
+                period=period_to_fetch,
+                group_by='ticker',
+                auto_adjust=True,
+                progress=False,
+                threads=True
+            )
+
+            if df_batch.empty:
                 continue
 
-            hist.index = hist.index.strftime('%Y-%m-%d')
-            new_data = hist[['Close']].to_dict()['Close']
+            for ticker in batch:
+                try:
+                    # Estrazione e pulizia della serie temporale
+                    if len(batch) == 1:
+                        series = df_batch['Close'] if 'Close' in df_batch else None
+                    else:
+                        series = df_batch[ticker]['Close'] if ticker in df_batch and 'Close' in df_batch[ticker] else None
 
-            if db_exists and ticker in market_data:
-                old_data = market_data[ticker]
-                if len(old_data) > 0 and period_to_fetch == "5d":
-                    last_date = list(old_data.keys())[-1]
-                    if last_date in old_data:
-                        del old_data[last_date]
-                old_data.update(new_data)
-                market_data[ticker] = old_data
-            else:
-                market_data[ticker] = new_data
-            
-            # Salvataggio ogni 10 ticker per sicurezza
-            if i % 10 == 0:
-                with open(DB_FILE, 'w') as f:
-                    json.dump(market_data, f)
+                    if series is None or series.dropna().empty:
+                        continue
 
-            time.sleep(0.2)
+                    series = series.dropna()
+                    series.index = series.index.strftime('%Y-%m-%d')
+                    new_data = series.to_dict()
+
+                    if db_exists and ticker in market_data:
+                        old_data = market_data[ticker]
+                        if len(old_data) > 0 and period_to_fetch == "5d":
+                            last_date = list(old_data.keys())[-1]
+                            if last_date in old_data:
+                                del old_data[last_date]
+                        old_data.update(new_data)
+                        market_data[ticker] = old_data
+                    else:
+                        market_data[ticker] = new_data
+                except Exception:
+                    continue
+
+            # Salvataggio incrementale (Checkpoint) su disco a ogni blocco scaricato
+            with open(DB_FILE, 'w') as f:
+                json.dump(market_data, f)
+
+            # Pausa di sicurezza per evitare saturazione delle API
+            time.sleep(1.0)
 
         except Exception as e:
-            err_msg = f"Errore con {ticker}: {e}"
+            err_msg = f"Errore blocco {b_idx + 1}: {e}"
             print(err_msg)
             with open('error_log.txt', 'a') as log_f:
                 log_f.write(f"{datetime.now().isoformat()} - {err_msg}\n")
+            time.sleep(2.0)
             continue
 
     update_progress(98, "Salvataggio finale del database...")
-    
     with open(DB_FILE, 'w') as f:
         json.dump(market_data, f)
         
