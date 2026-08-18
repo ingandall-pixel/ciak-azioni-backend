@@ -26,7 +26,7 @@ def clean_ticker(symbol):
     return str(symbol).replace('$', '').strip()
 
 def get_all_tickers():
-    update_progress(2, "Caricamento registro azioni USA (SEC) e Italia...")
+    update_progress(2, "Caricamento registro globale azioni USA e Italia...")
     
     tickers_us = []
     try:
@@ -41,23 +41,40 @@ def get_all_tickers():
     except Exception:
         tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA']
 
+    # Lista completa ed estesa di azioni italiane su Borsa Italiana / Stooq
     tickers_it = [
         'enel.it', 'eni.it', 'isp.it', 'ucg.it', 'stm.it', 'generali.it', 
         'ferrari.it', 'stellantis.it', 'leonardo.it', 'snam.it', 'terna.it', 
         'italgas.it', 'recordati.it', 'inwit.it', 'bper.it', 'mps.it', 
         'diasorin.it', 'moncler.it', 'nexi.it', 'prysmian.it', 'unipol.it', 
         'poste.it', 'erg.it', 'a2a.it', 'hera.it', 'campari.it', 'fineco.it', 
-        'bami.it', 'bff.it', 'bmed.it', 'igd.it', 'ip.it', 'luve.it', 'pi.it', 
-        'pir.it', 'race.it', 'saf.it', 'sl.it', 'spm.it', 'srg.it', 'ten.it', 
-        'tit.it', 'trn.it', 'txt.it', 'uni.it', 'vty.it', 'enav.it', 'sfer.it', 
-        'exo.it', 'anl.it', 'aal.it', 'aeffe.it', 'alg.it', 'am.it', 'ascopiave.it', 
-        'bmps.it', 'bpc.it', 'bri.it', 'br.it', 'cval.it', 'ctic.it', 'dea.it', 
-        'dis.it', 'elica.it', 'ema.it', 'espr.it', 'fidia.it', 'fnc.it', 'gedi.it', 
+        'bami.it', 'bff.it', 'bmed.it', 'ip.it', 'race.it', 'spm.it', 
+        'srg.it', 'ten.it', 'tit.it', 'trn.it', 'enav.it', 'sfer.it', 
+        'exo.it', 'amp.it', 'anim.it', 'azm.it', 'bre.it', 'dia.it', 
+        'fbk.it', 'fct.it', 'g.it', 'ldo.it', 'mb.it', 'pia.it', 'rec.it', 
+        'sfl.it', 'unipolsai.it', 'pirelli.it', 'igd.it', 'luve.it', 'pi.it', 
+        'pir.it', 'saf.it', 'sl.it', 'txt.it', 'uni.it', 'vty.it', 'anl.it', 
+        'aal.it', 'aeffe.it', 'alg.it', 'am.it', 'ascopiave.it', 'bmps.it', 
+        'bpc.it', 'bri.it', 'br.it', 'cval.it', 'ctic.it', 'dea.it', 'dis.it', 
+        'elica.it', 'ema.it', 'espr.it', 'fidia.it', 'fnc.it', 'gedi.it', 
         'geox.it', 'gr.it', 'ie.it', 'maire.it', 'mondadori.it', 'mutuionline.it', 
-        'ovs.it', 'pirelli.it', 'poligrafici.it', 'rcs.it', 'reply.it', 'safilo.it', 
-        'sol.it', 'tamburi.it', 'tiscali.it', 'trevi.it', 'unipolsai.it', 
-        'valsoia.it', 'netweek.it', 'esautomotion.it', 'giglio.it', 'indelb.it', 
-        'wiit.it', 'cofide.it', 'falck.it', 'servitalia.it'
+        'ovs.it', 'poligrafici.it', 'rcs.it', 'reply.it', 'safilo.it', 'sol.it', 
+        'tamburi.it', 'tiscali.it', 'trevi.it', 'valsoia.it', 'netweek.it', 
+        'esautomotion.it', 'giglio.it', 'indelb.it', 'wiit.it', 'cofide.it', 
+        'falck.it', 'servitalia.it', 'illimity.it', 'dovalue.it', 'orsero.it', 
+        'sesa.it', 'sanlorenzo.it', 'digitalbros.it', 'cy4gate.it', 'eurotech.it', 
+        'itway.it', 'openjobmetis.it', 'sabaf.it', 'saras.it', 'seriindustrial.it', 
+        'tessellis.it', 'avio.it', 'bancaifis.it', 'bancagenerali.it', 'bancaprofilo.it', 
+        'beghelli.it', 'brioschi.it', 'carraro.it', 'cattolica.it', 'credem.it', 
+        'datalogic.it', 'esprinet.it', 'ferretti.it', 'gabetti.it', 'immsi.it', 
+        'interpump.it', 'italmobiliare.it', 'mediobanca.it', 'monrif.it', 
+        'pininfarina.it', 'piaggio.it', 'portobello.it', 'prima.it', 'snai.it', 
+        'tas.it', 'unipol.it', 'valsoia.it', 'amplifon.it', 'azimut.it', 
+        'BFF Bank.it', 'Buzzi Unicem.it', 'Davide Campari-Milano.it', 'De'Longhi.it', 
+        'ERG.it', 'FinecoBank.it', 'Hera.it', 'Inwit.it', 'Italgas.it', 
+        'Leonardo.it', 'Mediobanca.it', 'Moncler.it', 'Nexi.it', 'Pirelli & C.it', 
+        'Poste Italiane.it', 'Prysmian.it', 'Recordati.it', 'Snam.it', 
+        'Telecom Italia.it', 'Tenaris.it', 'Terna.it', 'Unipol.it'
     ]
     
     cleaned = [t.lower().strip() for t in tickers_it]
@@ -67,8 +84,13 @@ def download_stooq_data(symbol):
     url = f"https://stooq.com/q/d/l/?s={symbol}&i=d"
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
     try:
-        with urllib.request.urlopen(req, timeout=6) as response:
-            df = pd.read_csv(io.StringIO(response.read().decode('utf-8')))
+        # Timeout impostato a 5 secondi per evitare blocchi permanenti su ticker morti/delisted
+        with urllib.request.urlopen(req, timeout=5) as response:
+            content = response.read().decode('utf-8')
+            # Se Stooq risponde con errore o file vuoto/delisted
+            if 'Exceeded' in content or '<html' in content.lower():
+                return None
+            df = pd.read_csv(io.StringIO(content))
             if 'Date' in df.columns and 'Close' in df.columns:
                 df = df.dropna(subset=['Close'])
                 df['Close'] = pd.to_numeric(df['Close'], errors='coerce')
@@ -96,9 +118,8 @@ def download_data():
     for idx, (ticker, market_type) in enumerate(all_tickers):
         percent = int((idx / total) * 90) + 5
         if idx % 50 == 0:
-            update_progress(percent, f"Scaricamento ({idx}/{total}) tramite Stooq...")
+            update_progress(percent, f"Scaricamento ({idx}/{total}) in corso...")
 
-        # CORRETTO QUI: .us fuori dalle parentesi graffe
         s_symbol = ticker if market_type == 'it' else f"{ticker}.us"
 
         history = download_stooq_data(s_symbol)
@@ -106,7 +127,8 @@ def download_data():
             clean_key = ticker.upper().replace('.IT', '.MI') if market_type == 'it' else ticker.upper()
             market_data[clean_key] = history
         
-        time.sleep(0.01)
+        # Ritardo di sicurezza aumentato a 0.15s per evitare il ban dell'IP da parte di Stooq
+        time.sleep(0.15)
 
     it_years_list = []
     us_years_list = []
