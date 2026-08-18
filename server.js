@@ -4,6 +4,8 @@ const path = require('path');
 const fs = require('fs');
 const app = express();
 
+let isAnalyzing = false; // Previeni sovrapposizione di istanze parallele
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -68,6 +70,11 @@ app.get('/api/data', (req, res) => {
 
 // Avvio aggiornamento database
 app.post('/api/run-analysis', (req, res) => {
+    if (isAnalyzing) {
+        return res.status(400).json({ success: false, message: "Aggiornamento già in corso." });
+    }
+
+    isAnalyzing = true;
     console.log("Ricevuto comando: Inizio aggiornamento database completo...");
     
     fs.writeFileSync('progress.json', JSON.stringify({ percent: 0, status: "Inizializzazione script..." }));
@@ -80,6 +87,7 @@ app.post('/api/run-analysis', (req, res) => {
     res.json({ success: true, message: "Processo avviato." });
 
     pythonProcess.on('close', (code) => {
+        isAnalyzing = false;
         console.log(`Script Python terminato con codice ${code}`);
         if (code === 0) {
             fs.writeFileSync('progress.json', JSON.stringify({ percent: 100, status: "Completato!" }));
