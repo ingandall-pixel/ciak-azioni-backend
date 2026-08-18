@@ -1,1 +1,110 @@
-{"percent": 100, "status": "Completato!", "it_count": 116, "it_avg_years": 4.7, "us_count": 521, "us_avg_years": 5.0}
+import os
+import json
+import time
+import requests
+import pandas as pd
+from datetime import datetime
+
+# Ottiene la cartella principale del progetto (un livello sopra se eseguito, o la cartella corrente)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_FILE = os.path.join(BASE_DIR, 'market_db.json')
+PROGRESS_FILE = os.path.join(BASE_DIR, 'progress.json')
+
+def update_progress(percent, status, extra_data=None):
+    data = {"percent": percent, "status": status}
+    if extra_data:
+        data.update(extra_data)
+    try:
+        with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f)
+    except Exception as e:
+        print(f"Errore scrittura progress: {e}")
+
+def fetch_yahoo_chart(ticker, range_str="5y"):
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
+    params = {"range": range_str, "interval": "1d", "events": "div,split"}
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        response = requests.get(url, headers=headers, params=params, timeout=15)
+        if response.status_code != 200:
+            return None
+        data = response.json()
+        result = data.get("chart", {}).get("result")
+        if not result:
+            return None
+        
+        res = result[0]
+        timestamps = res.get("timestamp", [])
+        closes = res.get("indicators", {}).get("quote", [{}])[0].get("close", [])
+        
+        history = {}
+        for ts, close in zip(timestamps, closes):
+            if ts and close is not None:
+                date_str = pd.to_datetime(ts, unit='s').strftime('%Y-%m-%d')
+                history[date_str] = float(close)
+        return history
+    except Exception:
+        return None
+
+def download_data():
+    update_progress(0, "Avvio analisi di mercato...")
+    market_data = {}
+    if os.path.exists(DB_FILE):
+        try:
+            with open(DB_FILE, 'r', encoding='utf-8') as f:
+                market_data = json.load(f)
+        except Exception:
+            market_data = {}
+
+    tickers_us = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA'] # (Mantieni la tua lista completa qui)
+    tickers_it = ['ENEL.MI', 'ENI.MI', 'ISP.MI', 'UCG.MI'] # (Mantieni la tua lista completa qui)
+
+    all_tickers = [(t, 'IT') for t in tickers_it] + [(t, 'US') for t in tickers_us]
+    total = len(all_tickers)
+
+    for idx, (sym, market) in enumerate(all_tickers):
+        percent = int((idx / total) * 90) + 5
+        update_progress(percent, f"Scaricamento {sym} ({idx+1}/{total})...")
+        
+        fetched_history = fetch_yahoo_chart(sym, range_str="5y")
+        if fetched_history and len(fetched_history) >= 2:
+            market_data[sym] = fetched_history
+        
+        time.sleep(0.5)
+
+    it_years_list, us_years_list = [], []
+    for sym, hist in market_data.items():
+        if not hist:
+            continue
+        dates = sorted(hist.keys())
+        if len(dates) >= 2:
+            try:
+                years = (datetime.strptime(dates[-1], '%Y-%m-%d') - datetime.strptime(dates[0], '%Y-%m-%d')).days / 365.25
+                if sym.endswith('.MI') or sym.endswith('.AS'):
+                    it_years_list.append(years)
+                else:
+                    us_years_list.append(years)
+            except Exception:
+                pass
+
+    it_count = sum(1 for sym in market_data if sym.endswith('.MI') or sym.endswith('.AS'))
+    us_count = len(market_data) - it_count
+    
+    it_avg_years = round(sum(it_years_list) / len(it_years_list), 1) if it_years_list else 0.0
+    us_avg_years = round(sum(us_years_list) / len(us_years_list), 1) if us_years_list else 0.0
+
+    try:
+        with open(DB_FILE, 'w', encoding='utf-8') as f:
+            json.dump(market_data, f, indent=2)
+    except Exception:
+        pass
+
+    update_progress(100, "Completato!", {
+        "it_count": it_count,
+        "it_avg_years": it_avg_years,
+        "us_count": us_count,
+        "us_avg_years": us_avg_years
+    })
+
+if __name__ == "__main__":
+    download_data()
