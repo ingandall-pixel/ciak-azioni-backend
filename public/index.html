@@ -6,23 +6,9 @@
     <title>Ciak Azioni Dashboard</title>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9; }
-        
-        .error-box { 
-            color: #721c24; 
-            background-color: #f8d7da; 
-            border: 1px solid #f5c6cb; 
-            padding: 15px; 
-            margin-bottom: 20px; 
-            border-radius: 4px;
-            display: none; /* Nascosto di default */
-        }
-
         .controls { margin-bottom: 20px; display: flex; gap: 10px; align-items: center; }
-        
         button { padding: 8px 16px; cursor: pointer; }
-        
         .container-periodo { margin-top: 20px; margin-bottom: 20px; padding: 20px; border: 1px solid #ddd; background: white; }
-
         table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
         th { background-color: #212529; color: white; }
@@ -30,16 +16,11 @@
 </head>
 <body>
 
-    <!-- Box Errore -->
-    <div id="errore-box" class="error-box"></div>
-
-    <!-- Pulsanti -->
     <div class="controls">
-        <button onclick="caricaDati('italiano')">Mercato Italiano</button>
-        <button onclick="caricaDati('americano')">Mercato Americano</button>
+        <button onclick="visualizzaDati('italiano')">Mercato Italiano</button>
+        <button onclick="visualizzaDati('americano')">Mercato Americano</button>
     </div>
 
-    <!-- Selettore Periodo -->
     <div class="container-periodo">
         <label for="periodo"><strong>Periodo:</strong></label>
         <select id="periodo">
@@ -47,7 +28,6 @@
         </select>
     </div>
 
-    <!-- Tabella -->
     <table id="tabella-azioni">
         <thead>
             <tr>
@@ -57,51 +37,41 @@
             </tr>
         </thead>
         <tbody id="corpo-tabella">
-            <!-- I dati verranno inseriti qui dallo script -->
+            <!-- I dati verranno inseriti qui -->
         </tbody>
     </table>
 
     <script>
-        async function caricaDati(mercato) {
-            const erroreBox = document.getElementById('errore-box');
-            erroreBox.style.display = 'none'; // Nascondi errore precedente
+        // Inserisci qui i tuoi dati manualmente (o verranno passati da un'altra sorgente)
+        const databaseLocale = {
+            italiano: [
+                { azione: "Enel", prezzo: "6.80 €", var_periodo: "+1.2%" },
+                { azione: "Intesa Sanpaolo", prezzo: "3.45 €", var_periodo: "+0.8%" }
+            ],
+            americano: [
+                { azione: "Apple", prezzo: "$175.00", var_periodo: "+2.5%" },
+                { azione: "Tesla", prezzo: "$220.00", var_periodo: "-1.1%" }
+            ]
+        };
 
-            try {
-                // Poiché il file è nella stessa cartella (public), il percorso è ./
-                const response = await fetch('./market_db.json');
-                
-                if (!response.ok) {
-                    throw new Error(`Errore nel caricamento del file (Status: ${response.status})`);
-                }
-                
-                const data = await response.json();
-                
-                // Verifica che il mercato richiesto esista nel JSON
-                if (data[mercato]) {
-                    popolaTabella(data[mercato]);
-                } else {
-                    throw new Error(`Mercato "${mercato}" non trovato nel file JSON`);
-                }
-                
-            } catch (error) {
-                console.error(error);
-                erroreBox.innerText = "Errore nel caricamento dei dati di mercato: Impossibile caricare market_db.json";
-                erroreBox.style.display = 'block';
-            }
-        }
-
-        function popolaTabella(azioni) {
+        function visualizzaDati(mercato) {
             const corpo = document.getElementById('corpo-tabella');
-            corpo.innerHTML = ''; // Svuota la tabella prima di riempirla
+            corpo.innerHTML = ''; // Svuota la tabella
             
-            azioni.forEach(item => {
-                const row = `<tr>
-                    <td>${item.azione}</td>
-                    <td>${item.prezzo}</td>
-                    <td>${item.var_periodo}</td>
-                </tr>`;
-                corpo.innerHTML += row;
-            });
+            const datiSelezionati = databaseLocale[mercato];
+
+            if (datiSelezionati) {
+                datiSelezionati.forEach(item => {
+                    const row = `<tr>
+                        <td>${item.azione}</td>
+                        <td>${item.prezzo}</td>
+                        <td>${item.var_periodo}</td>
+                    </tr>`;
+                    corpo.innerHTML += row;
+                });
+            } else {
+                corpo.innerHTML = '<tr><td colspan="3">Nessun dato disponibile</td></tr>';
+            }
         }
     </script>
 </body>
