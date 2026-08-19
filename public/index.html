@@ -7,12 +7,15 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; color: #333; }
         .container { max-width: 1200px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .action-buttons { display: flex; gap: 10px; margin-bottom: 20px; }
         .filters { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end; }
         .filter-group { display: flex; flex-direction: column; }
         .filter-group label { font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #555; }
         .filter-group select, .filter-group input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
         button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
         button:hover { background-color: #0056b3; }
+        button.secondary { background-color: #6c757d; }
+        button.secondary:hover { background-color: #5a6268; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background-color: #343a40; color: white; cursor: pointer; }
@@ -30,8 +33,13 @@
 <div class="container">
     <h2>Analisi di Mercato</h2>
     
-    <button id="btnAvvia">Avvia Analisi di Mercato</button>
+    <!-- Pulsanti di azione -->
+    <div class="action-buttons">
+        <button id="btnAvvia">Avvia Analisi di Mercato</button>
+        <button id="btnRestituisci" class="secondary">Restituisci risultati</button>
+    </div>
 
+    <!-- 4 Caselle di Filtro con Titoli -->
     <div class="filters">
         <div class="filter-group">
             <label for="selectMercato">Mercato</label>
@@ -68,6 +76,7 @@
         * Legenda Filtri: Mediana / Media (Min: -100%, Max: +100%). Deviazione Std / Media (Min: 0%, Max: 1000%). I filtri agiscono come limiti inferiori
     </div>
 
+    <!-- Tabelle Risultati -->
     <div id="risultatiContainer">
         <h3>Azioni Italiane</h3>
         <table>
@@ -110,9 +119,15 @@
         document.getElementById('inputDev').value = "0";
         
         document.getElementById('btnAvvia').addEventListener('click', eseguiAnalisi);
+        document.getElementById('btnRestituisci').addEventListener('click', caricaRisultati);
     });
 
     async function eseguiAnalisi() {
+        // Qui puoi gestire l'avvio effettivo dell'analisi/aggiornamento backend se previsto
+        await caricaRisultati();
+    }
+
+    async function caricaRisultati() {
         const payload = {
             mercato: document.getElementById('selectMercato').value,
             arcoTemporale: document.getElementById('selectArco').value,
@@ -130,7 +145,7 @@
             popolaTabella('tabellaItalia', data.italia);
             popolaTabella('tabellaUsa', data.usa);
         } catch (error) {
-            console.error("Errore durante l'analisi:", error);
+            console.error("Errore durante il recupero dei risultati:", error);
         }
     }
 
