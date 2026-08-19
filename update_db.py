@@ -1,118 +1,69 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-    <meta charset="UTF-8">
-    <title>Analisi di Mercato</title>
-</head>
-<body style="font-family: Arial, sans-serif; margin: 40px;">
+import os
+import json
+from datetime import datetime, timedelta
 
-    <h1>Dashboard Finanziaria</h1>
+DB_FILE = "market_db.json"
 
-    <!-- Pulsanti di azione -->
-    <div style="margin: 20px 0;">
-        <button id="btn-analysis" onclick="startAnalysis()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">Avvia analisi di mercato</button>
-        <button id="btn-results" onclick="fetchResults()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; margin-left: 10px;">Restituisci risultati</button>
-    </div>
+def carica_db():
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, "r") as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                return {}
+    return {}
 
-    <!-- Barra di avanzamento per l'Analisi -->
-    <div id="progress-container-analysis" style="display: none; margin-top: 15px; width: 400px;">
-        <p id="status-text-analysis" style="margin: 0 0 5px 0; font-size: 14px; font-weight: bold;">Preparazione analisi...</p>
-        <div style="width: 100%; background-color: #f3f3f3; border-radius: 4px; overflow: hidden; border: 1px solid #ccc;">
-            <div id="progress-bar-analysis" style="width: 0%; height: 22px; background-color: #4CAF50; transition: width 0.3s;"></div>
-        </div>
-    </div>
+def salva_db(data):
+    with open(DB_FILE, "w") as f:
+        json.dump(data, f, indent=4)
 
-    <!-- Barra di avanzamento per i Risultati -->
-    <div id="progress-container-results" style="display: none; margin-top: 15px; width: 400px;">
-        <p id="status-text-results" style="margin: 0 0 5px 0; font-size: 14px; font-weight: bold;">Caricamento risultati...</p>
-        <div style="width: 100%; background-color: #f3f3f3; border-radius: 4px; overflow: hidden; border: 1px solid #ccc;">
-            <div id="progress-bar-results" style="width: 0%; height: 22px; background-color: #2196F3; transition: width 0.3s;"></div>
-        </div>
-    </div>
+def aggiorna_archivio_completo():
+    db = carica_db()
+    oggi = datetime.now().date()
+    limite_5_anni_fa = oggi - timedelta(days=5*365)
+    
+    # Qui integri la tua logica di recupero dati per ciascun titolo presente nel db
+    for ticker, dati_azione in db.items():
+        storico = dati_azione.get("istorico", []) # o la chiave che usi per le quotazioni
+        
+        # 1. Individua l'ultima data di quotazione presente
+        if storico:
+            ultima_data_str = storico[-1].get('date')
+            ultima_data = datetime.strptime(ultima_data_str, '%Y-%m-%d').date()
+        else:
+            ultima_data = limite_5_anni_fa
 
-    <script>
-        function pollProgress(containerId, barId, textId, onComplete) {
-            const container = document.getElementById(containerId);
-            const bar = document.getElementById(barId);
-            const text = document.getElementById(textId);
-            
-            container.style.display = "block";
-            
-            const interval = setInterval(() => {
-                fetch('/progress.json?' + new Date().getTime())
-                    .then(response => response.json())
-                    .then(data => {
-                        const percent = data.percent || 0;
-                        bar.style.width = percent + "%";
-                        text.innerText = data.status || `Progresso: ${percent}%`;
-                        
-                        if (percent >= 100) {
-                            clearInterval(interval);
-                            if (onComplete) onComplete(data);
-                        }
-                    })
-                    .catch(err => {
-                        console.error("In attesa del file progress.json...", err);
-                    });
-            }, 1000);
-        }
+        # Se siamo già aggiornati a oggi, saltiamo
+        if ultima_data >= oggi:
+            continue
 
-        function startAnalysis() {
-            const btn = document.getElementById('btn-analysis');
-            btn.disabled = true;
-            
-            // Resetta la barra visivamente prima di iniziare
-            document.getElementById('progress-bar-analysis').style.width = "0%";
-            document.getElementById('status-text-analysis').innerText = "Avvio in corso...";
+        # 2. Scarica i giorni mancanti da ultima_data + 1 giorno fino a oggi
+        # (Richiama qui la funzione di download/aggiornamento specifica del tuo script)
+        nuovi_dati = scarica_dati_mancanti(ticker, ultima_data + timedelta(days=1), oggi)
+        
+        if nuovi_dati:
+            storico.extend(nuovi_dati)
+            # Ordina per data
+            storico = sorted(storico, key=lambda x: x['date'])
 
-            fetch('/run-update', { method: 'POST' })
-                .then(response => {
-                    if (response.ok) {
-                        pollProgress(
-                            'progress-container-analysis', 
-                            'progress-bar-analysis', 
-                            'status-text-analysis', 
-                            (finalData) => {
-                                // Pop-up richiesto con i dati formattati a una cifra decimale
-                                alert(
-                                    "Analisi di mercato completata!\n\n" +
-                                    "• Azioni Italiane popolate: " + (finalData.it_count || 0) + "\n" +
-                                    "  Media anni di popolamento: " + (finalData.it_avg_years !== undefined ? finalData.it_avg_years.toFixed(1) : "0.0") + " anni\n\n" +
-                                    "• Azioni Americane popolate: " + (finalData.us_count || 0) + "\n" +
-                                    "  Media anni di popolamento: " + (finalData.us_avg_years !== undefined ? finalData.us_avg_years.toFixed(1) : "0.0") + " anni"
-                                );
-                                btn.disabled = false;
-                            }
-                        );
-                    }
-                })
-                .catch(err => {
-                    alert("Errore di connessione al server");
-                    btn.disabled = false;
-                });
-        }
+        # 3. Regola dei 5 anni massimi (finestra mobile rigida)
+        # Filtriamo mantenendo solo gli ultimi 5 anni rispetto a oggi
+        storico_filtrato = [
+            d for d in storico 
+            if datetime.strptime(d['date'], '%Y-%m-%d').date() >= limite_5_anni_fa
+        ]
+        
+        dati_azione["istorico"] = storico_filtrato
+        db[ticker] = dati_azione
 
-        function fetchResults() {
-            const container = document.getElementById('progress-container-results');
-            const bar = document.getElementById('progress-bar-results');
-            const text = document.getElementById('status-text-results');
-            
-            container.style.display = "block";
-            bar.style.width = "0%";
-            text.innerText = "Elaborazione risultati in corso...";
+    salva_db(db)
+    return db
 
-            let progress = 0;
-            const fakeInterval = setInterval(() => {
-                progress += 20;
-                bar.style.width = progress + "%";
-                text.innerText = `Caricamento risultati... ${progress}%`;
-                
-                if (progress >= 100) {
-                    clearInterval(fakeInterval);
-                    text.innerText = "Risultati pronti con successo!";
-                }
-            }, 300);
-        }
-    </script>
-</body>
-</html>
+def scarica_dati_mancanti(ticker, data_inizio, data_fine):
+    # Inserisci qui la chiamata effettiva che usi per scaricare i dati da Yahoo/Investing o altra fonte
+    dati_scaricati = []
+    # Esempio fittizio di integrazione con il tuo scraper esistente
+    return dati_scaricati
+
+if __name__ == "__main__":
+    aggiorna_archivio_completo()
