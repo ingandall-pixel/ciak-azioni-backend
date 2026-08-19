@@ -1,13 +1,15 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { calcola_statistiche_periodo } = require('./analyzer'); // se analyzer fosse in python, qui gestiamo la chiamata o simuliamo in JS. 
+// Attenzione: analyzer.py è in Python. Nel server Node.js dobbiamo calcolare i valori o passarli.
+// Per semplicità e coerenza con la tua struttura, vediamo come leggerli dal DB o calcolarli.
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// Endpoint per ottenere i dati elaborati con i filtri e l'arco temporale
 app.post('/api/analizza', (req, res) => {
     const { mercato, arcoTemporale, minMediana, minDev } = req.body;
     
@@ -20,8 +22,10 @@ app.post('/api/analizza', (req, res) => {
     let risultatiItalia = [];
     let risultatiUsa = [];
 
+    const minMedNum = parseFloat(minMediana) || 0;
+    const minDevNum = parseFloat(minDev) || 0;
+
     for (const [ticker, info] of Object.entries(db)) {
-        // Logica di filtraggio per mercato (italia / usa)
         const tipoMercato = info.mercato ? info.mercato.toLowerCase() : 'italia';
         
         if (mercato !== 'tutti' && tipoMercato !== mercato) {
@@ -31,22 +35,23 @@ app.post('/api/analizza', (req, res) => {
         const storico = info.istorico || [];
         if (storico.length === 0) continue;
 
-        const ultimoPrezzo = storico[storico.length - 1].close || 0;
-        const varGiornaliera = storico[storico.length - 1].change || 0;
-        const varPeriodo = info.var_periodo || 0; // O calcolata sul periodo
-
-        // Link Investing.com associato direttamente al titolo
-        const linkInvesting = info.link_investing || `https://www.investing.com/search/?q=${ticker}`;
+        const ultimoElemento = storico[storico.length - 1];
+        const ultimoPrezzo = ultimoElemento.close || 0;
+        const varGiornaliera = ultimoElemento.change || 0;
         
-        // Ultimo grafico giornaliero disponibile (Trend)
+        // Variazione di periodo (puoi regolarla in base a come salvi i dati nel db)
+        const varPeriodo = info.var_periodo || 0; 
+
+        const linkInvesting = info.link_investing || `https://www.investing.com/search/?q=${ticker}`;
         const trendGrafico = info.trend_html || '';
 
-        // Valori simulati o calcolati tramite analyzer (qui rappresentati come metriche di esempio)
+        // Recuperiamo o simuliamo i valori calcolati in base all'arco temporale
+        // (Se vengono salvati nel DB o calcolati al volo)
         const medianaMedia = info.mediana_media || 0.0;
         const devStdMedia = info.dev_std_media || 0.0;
 
-        // Applicazione dei filtri come limiti inferiori
-        if (medianaMedia >= parseFloat(minMediana) && devStdMedia >= parseFloat(minDev)) {
+        // Applicazione rigorosa dei filtri come limiti inferiori
+        if (medianaMedia >= minMedNum && devStdMedia >= minDevNum) {
             const elemento = {
                 titolo: ticker,
                 link: linkInvesting,
