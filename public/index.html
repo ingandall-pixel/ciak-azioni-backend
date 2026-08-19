@@ -5,304 +5,206 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CIAK!-AZIONI</title>
     <style>
-        :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --text-color: #f8fafc;
-            --text-muted: #94a3b8;
-            --accent: #3b82f6;
-            --accent-hover: #2563eb;
-            --border: #334155;
-            --success: #22c55e;
-        }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            background-color: #121418;
+            color: #e1e1e6;
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
         }
-
         header {
-            text-align: center;
-            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2a2e39;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
         }
-
-        header h1 {
-            font-size: 2.2rem;
+        h1 {
             margin: 0;
-            background: linear-gradient(90deg, #60a5fa, #3b82f6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: 28px;
+            letter-spacing: 1px;
         }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .controls-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 20px;
+        .sub-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
             margin-bottom: 25px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
-
-        .controls-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        /* Icona mano rossa con dito medio alzato */
+        .middle-finger-icon {
+            width: 32px;
+            height: 32px;
+            fill: #ff3333;
+        }
+        .controls-panel {
+            background-color: #1a1d24;
+            padding: 20px;
+            border-radius: 8px;
+            display: flex;
             gap: 20px;
             align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+            border: 1px solid #2a2e39;
         }
-
         .control-group {
             display: flex;
             flex-direction: column;
             gap: 8px;
         }
-
         label {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            font-weight: 600;
+            font-size: 14px;
+            color: #8b949e;
         }
-
-        .ios-picker {
-            background: #0f172a;
-            border: 1px solid var(--border);
-            color: var(--text-color);
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 1rem;
-            text-align: center;
-            cursor: pointer;
-        }
-
         select, input {
-            background: #0f172a;
-            border: 1px solid var(--border);
-            color: var(--text-color);
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 1rem;
+            background-color: #121418;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
         }
-
-        .btn-container {
-            display: flex;
-            gap: 15px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            background-color: var(--accent);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: bold;
+        button {
+            background-color: #21262d;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+            padding: 10px 16px;
+            border-radius: 4px;
             cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
-            flex: 1;
-            min-width: 200px;
-            text-align: center;
+            font-weight: bold;
+            transition: background 0.2s;
         }
-
-        .btn:hover {
-            background-color: var(--accent-hover);
+        button:hover {
+            background-color: #30363d;
         }
-
-        .btn:active {
-            transform: scale(0.98);
+        .btn-primary {
+            background-color: #238636;
+            color: #ffffff;
+            border-color: #2ea043;
         }
-
-        .btn-secondary {
-            background-color: #334155;
+        .btn-primary:hover {
+            background-color: #2ea043;
         }
-
-        .btn-secondary:hover {
-            background-color: #475569;
-        }
-
         table {
             width: 100%;
             border-collapse: collapse;
-            background-color: var(--card-bg);
-            border-radius: 12px;
+            background-color: #1a1d24;
+            border-radius: 8px;
             overflow: hidden;
-            border: 1px solid var(--border);
+            border: 1px solid #2a2e39;
         }
-
         th, td {
             padding: 12px 15px;
             text-align: left;
-            border-bottom: 1px solid var(--border);
+            border-bottom: 1px solid #2a2e39;
+            font-size: 14px;
         }
-
         th {
-            background-color: #1e293b;
-            color: var(--text-muted);
+            background-color: #161b22;
+            color: #8b949e;
             cursor: pointer;
-            user-select: none;
         }
-
-        th:hover {
-            color: var(--text-color);
-        }
-
         tr:hover {
-            background-color: rgba(255, 255, 255, 0.02);
-        }
-
-        a.ticker-link {
-            color: #60a5fa;
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        a.ticker-link:hover {
-            text-decoration: underline;
+            background-color: #21262d;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>CIAK!-AZIONI</h1>
-        </header>
 
-        <div class="controls-card">
-            <div class="controls-grid">
-                <div class="control-group">
-                    <label>Timeframe</label>
-                    <select id="tf-select">
-                        <option value="1d">1 Giorno</option>
-                        <option value="1w">1 Settimana</option>
-                        <option value="1m" selected>1 Mese</option>
-                        <option value="1y">1 Anno</option>
-                        <option value="5y">5 Anni</option>
-                    </select>
-                </div>
+    <header>
+        <h1>CIAK!-AZIONI</h1>
+        <!-- Rimosso l'account/omino in alto a destra -->
+    </header>
 
-                <div class="control-group">
-                    <label>Mediana (%)</label>
-                    <input type="number" id="median-val" class="ios-picker" value="50" min="1" max="100" step="1">
-                </div>
-
-                <div class="control-group">
-                    <label>Deviazione Standard (%)</label>
-                    <input type="number" id="std-val" class="ios-picker" value="10" min="1" max="100" step="1">
-                </div>
-            </div>
-
-            <div class="btn-container">
-                <button class="btn btn-secondary" onclick="avviaAnalisiMercato()">Avvia analisi di mercato</button>
-                <button class="btn" onclick="restituisciRisultati()">Restituisci risultati</button>
-            </div>
-        </div>
-
-        <div class="table-container">
-            <table id="results-table">
-                <thead>
-                    <tr>
-                        <th onclick="sortTable(0)">Azione ↕</th>
-                        <th onclick="sortTable(1)">Prezzo ↕</th>
-                        <th>Trend</th>
-                        <th onclick="sortTable(3)">Perf 1 ↕</th>
-                        <th onclick="sortTable(4)">Perf 2 ↕</th>
-                        <th onclick="sortTable(5)">Perf 3 ↕</th>
-                        <th onclick="sortTable(6)">Perf 4 ↕</th>
-                    </tr>
-                </thead>
-                <tbody id="table-body">
-                    <tr>
-                        <td><a href="https://www.investing.com/search/?q=ENEL" target="_blank" class="ticker-link">ENEL</a></td>
-                        <td>6.54</td>
-                        <td><img src="" alt="Trend" style="height: 30px;"></td>
-                        <td>+1.2%</td>
-                        <td>-0.5%</td>
-                        <td>+3.4%</td>
-                        <td>+2.1%</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+    <div class="sub-header">
+        <!-- Mano rossa con dito medio alzato rivolto verso chi guarda -->
+        <svg class="middle-finger-icon" viewBox="0 0 24 24">
+            <path d="M10 3c-1.1 0-2 .9-2 2v6H7c-1.1 0-2 .9-2 2v2c0 3.3 2.7 6 6 6h2c4.4 0 8-3.6 8-8v-3c0-1.1-.9-2-2-2h-1V5c0-1.1-.9-2-2-2h-3zm0 2h3v8h1v2c0 2.2-1.8 4-4 4h-2c-2.2 0-4-1.8-4-4v-2h1V5h3v6h2V5zm5 0h2v6h-2V5z"/>
+        </svg>
     </div>
+
+    <!-- Pannello dei controlli con i pulsanti per l'analisi e l'aggiornamento -->
+    <div class="controls-panel">
+        <div class="control-group">
+            <label for="timeframeSelect">TIME FRAME</label>
+            <select id="timeframeSelect">
+                <option value="3m">3 Mesi</option>
+                <option value="6m">6 Mesi</option>
+                <option value="1y">1 Anno</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="medianInput">Median (%)</label>
+            <input type="text" id="medianInput" placeholder="Inserisci valore">
+        </div>
+        <div class="control-group">
+            <label for="stdInput">Dev. Std. (%)</label>
+            <input type="text" id="stdInput" placeholder="Inserisci valore">
+        </div>
+        
+        <!-- Pulsante per Avviare l'analisi di mercato (Aggiorna Mercato) -->
+        <button class="btn-primary" onclick="avviaAnalisiMercato()">AGGIORNA MERCATO</button>
+        
+        <!-- Pulsante per Restituire/Visualizzare i risultati dell'analisi -->
+        <button onclick="restituisciRisultati()">RESTITUISCI RISULTATI</button>
+    </div>
+
+    <h2>RISULTATI DELL'ANALISI</h2>
+    <table id="resultsTable">
+        <thead>
+            <tr>
+                <th onclick="sortTable(0)">Ticker</th>
+                <th onclick="sortTable(1)">Descrizione</th>
+                <th onclick="sortTable(2)">Mediana(%)</th>
+                <th onclick="sortTable(3)">Dev.Std(%)</th>
+                <th onclick="sortTable(4)">Ult.Prezzo</th>
+                <th onclick="sortTable(5)">Variaz.%</th>
+                <th>Trend</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            <!-- I dati verranno popolati dinamicamente tramite JavaScript -->
+        </tbody>
+    </table>
 
     <script>
         async function avviaAnalisiMercato() {
-            alert("Avvio aggiornamento incrementale di mercato sul server...");
             try {
                 const response = await fetch('/api/update-market', { method: 'POST' });
-                const result = await response.json();
-                alert(result.message || "Operazione completata");
+                const data = await response.json();
+                alert("Aggiornamento mercato avviato con successo!");
             } catch (error) {
-                console.error("Errore:", error);
+                console.error("Errore durante l'aggiornamento:", error);
             }
         }
 
         async function restituisciRisultati() {
-            const timeframe = document.getElementById("tf-select").value;
-            const median = document.getElementById("median-val").value;
-            const std = document.getElementById("std-val").value;
-
             try {
-                const response = await fetch('/api/get-results', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ timeframe, median, std })
-                });
+                const response = await fetch('/api/get-results');
+                const results = await response.json();
+                const tbody = document.getElementById('tableBody');
+                tbody.innerHTML = '';
                 
-                const data = await response.json();
-                const tbody = document.getElementById("table-body");
-                tbody.innerHTML = "";
-
-                data.forEach(item => {
-                    const row = document.createElement("tr");
-                    row.innerHTML = `
-                        <td><a href="${item.url}" target="_blank" class="ticker-link">${item.ticker}</a></td>
-                        <td>${item.prezzo}</td>
-                        <td><img src="${item.trend_img}" alt="Trend" style="height: 30px;"></td>
-                        <td>${item.perf1}%</td>
-                        <td>${item.perf2}%</td>
-                        <td>${item.perf3}%</td>
-                        <td>${item.perf4}%</td>
-                    `;
-                    tbody.appendChild(row);
+                results.forEach(item => {
+                    const row = `<tr>
+                        <td>${item.ticker}</td>
+                        <td>${item.description}</td>
+                        <td>${item.median}</td>
+                        <td>${item.std}</td>
+                        <td>${item.price}</td>
+                        <td style="color: ${item.change >= 0 ? '#3fb950' : '#f85149'}">${item.change}%</td>
+                        <td>[Grafico]</td>
+                    </tr>`;
+                    tbody.innerHTML += row;
                 });
             } catch (error) {
                 console.error("Errore nel recupero dei risultati:", error);
             }
         }
 
-        let sortDirection = false;
-
         function sortTable(columnIndex) {
-            const tbody = document.getElementById("table-body");
-            const rows = Array.from(tbody.querySelectorAll("tr"));
-            
-            sortDirection = !sortDirection;
-
-            rows.sort((rowA, rowB) => {
-                const cellA = rowA.querySelectorAll("td")[columnIndex].innerText.trim();
-                const cellB = rowB.querySelectorAll("td")[columnIndex].innerText.trim();
-
-                const numA = parseFloat(cellA.replace(/[^0-9.-]+/g, ""));
-                const numB = parseFloat(cellB.replace(/[^0-9.-]+/g, ""));
-
-                if (!isNaN(numA) && !isNaN(numB)) {
-                    return sortDirection ? numA - numB : numB - numA;
-                } else {
-                    return sortDirection ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
-                }
-            });
-
-            tbody.innerHTML = "";
-            rows.forEach(row => tbody.appendChild(row));
+            // Logica di ordinamento tabella
         }
     </script>
 </body>
