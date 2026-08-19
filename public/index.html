@@ -2,239 +2,129 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>CIAK! - AZIONI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisi di Mercato</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
-        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h2 { border-left: 5px solid #007bff; padding-left: 10px; color: #333; }
-        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 10px; }
-        select, input, button { padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
-        button { background: #007bff; color: white; cursor: pointer; border: none; font-weight: bold; }
-        button:hover:not(:disabled) { background: #0056b3; }
-        button:disabled { background: #6c757d; cursor: not-allowed; opacity: 0.65; }
-        .legend { font-size: 12px; color: #666; margin-bottom: 20px; font-style: italic; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { background: #343a40; color: white; padding: 12px; }
-        td { padding: 10px; border-bottom: 1px solid #ddd; text-align: center; }
-
-        /* Stili per le barre di avanzamento */
-        .progress-container {
-            display: none;
-            margin-top: 15px;
-            margin-bottom: 20px;
-            background: #f8f9fa;
-            padding: 12px;
-            border-radius: 6px;
-            border: 1px solid #e9ecef;
-        }
-        .progress-bar-bg {
-            width: 100%;
-            background-color: #e9ecef;
-            border-radius: 4px;
-            overflow: hidden;
-            height: 18px;
-            margin-top: 6px;
-        }
-        .progress-bar-fill {
-            width: 0%;
-            height: 100%;
-            background-color: #28a745;
-            transition: width 0.3s ease;
-        }
-        #progress-bar-results-fill {
-            background-color: #007bff;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; color: #333; }
+        .container { max-width: 1200px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .filters { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flexDirection: column; }
+        .filter-group label { font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #555; }
+        .filter-group select, .filter-group input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #343a40; color: white; cursor: pointer; }
+        th.no-sort { cursor: default; }
+        .text-green { color: #28a745; font-weight: bold; }
+        .text-red { color: #dc3545; font-weight: bold; }
+        .text-gray { color: #6c757d; font-weight: bold; }
+        .legend { font-size: 12px; margin-top: 15px; color: #666; font-style: italic; }
+        a { text-decoration: none; color: #007bff; }
+        a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>CIAK! - AZIONI</h2>
+    <h2>Analisi di Mercato</h2>
+    
+    <!-- Pulsante Avvia Analisi -->
+    <button id="btnAvvia">Avvia Analisi di Mercato</button>
 
-    <!-- Sezione Aggiornamento Dati e Barra di Avanzamento Analisi -->
-    <div style="margin-bottom: 20px;">
-        <button id="btn-analysis" onclick="avviaAggiornamento()">Avvia analisi di mercato (Download)</button>
-        
-        <div id="progress-container-analysis" class="progress-container">
-            <p id="status-text-analysis" style="margin: 0; font-size: 13px; color: #333;">Preparazione analisi...</p>
-            <div class="progress-bar-bg">
-                <div id="progress-bar-analysis" class="progress-bar-fill"></div>
-            </div>
+    <!-- 4 Caselle di Filtro con Titoli -->
+    <div class="filters">
+        <div class="filter-group">
+            <label for="selectMercato">Mercato</label>
+            <select id="selectMercato">
+                <option value="tutti">Tutti</option>
+                <option value="italia">Italia</option>
+                <option value="usa">USA</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="selectArco">Arco Temporale</label>
+            <select id="selectArco">
+                <!-- Il primo elemento in alto è di default -->
+                <option value="1m">1 Mese</option>
+                <option value="3m">3 Mesi</option>
+                <option value="6m">6 Mesi</option>
+                <option value="1y">1 Anno</option>
+                <option value="5y">5 Anni</option>
+            </select>
+        </div>
+
+        <div class="filter-group">
+            <label for="inputMediana">Min Mediana / Media (%)</label>
+            <input type="number" id="inputMediana" value="0" step="1">
+        </div>
+
+        <div class="filter-group">
+            <label for="inputDev">Min Dev. Std / Media (%)</label>
+            <input type="number" id="inputDev" value="0" step="1">
         </div>
     </div>
 
-    <div class="controls">
-        <select id="market"><option value="ALL">Tutti i mercati</option><option value="IT">Italia</option><option value="US">USA</option></select>
-        <select id="timeframe">
-            <option value="1w">1 Settimana</option><option value="1m" selected>1 Mese</option>
-            <option value="3m">3 Mesi</option><option value="6m">6 Mesi</option>
-            <option value="1y">1 Anno</option>
-        </select>
-        <input type="number" id="median" value="50" min="-100" max="100" placeholder="Min Mediana %">
-        <input type="number" id="std" value="10" min="0" max="1000" placeholder="Min Std %">
-        <button id="btn-results" onclick="caricaRisultati()">Restituisci risultati</button>
-    </div>
-    
-    <!-- Barra di Avanzamento Risultati -->
-    <div id="progress-container-results" class="progress-container">
-        <p id="status-text-results" style="margin: 0; font-size: 13px; color: #333;">Elaborazione risultati...</p>
-        <div class="progress-bar-bg">
-            <div id="progress-bar-results-fill" class="progress-bar-fill"></div>
-        </div>
-    </div>
-    
+    <!-- Legenda Filtri aggiornata -->
     <div class="legend">
-        * <strong>Legenda Limiti:</strong> 
-        Mediana / Media (Min: -100%, Max: +100%). 
-        Deviazione Std / Media (Min: 0%, Max: 1000%). 
-        I filtri agiscono come limiti minimi inferiori ($\ge$).
+        * Legenda Filtri: Mediana / Media (Min: -100%, Max: +100%). Deviazione Std / Media (Min: 0%, Max: 1000%). I filtri agiscono come limiti inferiori
     </div>
 
-    <h3>🇮🇹 Azioni Italiane</h3>
-    <table id="table-it">
-        <thead><tr><th>Ticker</th><th>Prezzo</th><th>Var. Periodo</th><th>Var. Giorn.</th><th>Mediana/Media</th><th>Dev.Std/Media</th><th>Link</th></tr></thead>
-        <tbody id="body-it"></tbody>
-    </table>
+    <!-- Tabelle Risultati -->
+    <div id="risultatiContainer">
+        <h3>Azioni Italiane</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0, 'italia')">Titolo</th>
+                    <th onclick="sortTable(1, 'italia')">Prezzo</th>
+                    <th class="no-sort">Trend</th>
+                    <th onclick="sortTable(3, 'italia')">Var. Periodo</th>
+                    <th onclick="sortTable(4, 'italia')">Var. Giorn.</th>
+                    <th onclick="sortTable(5, 'italia')">Mediana/Media</th>
+                    <th onclick="sortTable(6, 'italia')">Dev.Std/Media</th>
+                </tr>
+            </thead>
+            <tbody id="tabellaItalia">
+                <!-- Righe dinamiche -->
+            </tbody>
+        </table>
 
-    <h3>🇺🇸 Azioni Americane</h3>
-    <table id="table-us">
-        <thead><tr><th>Ticker</th><th>Prezzo</th><th>Var. Periodo</th><th>Var. Giorn.</th><th>Mediana/Media</th><th>Dev.Std/Media</th><th>Link</th></tr></thead>
-        <tbody id="body-us"></tbody>
-    </table>
+        <h3 style="margin-top: 30px;">Azioni Americane</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th onclick="sortTable(0, 'usa')">Titolo</th>
+                    <th onclick="sortTable(1, 'usa')">Prezzo</th>
+                    <th class="no-sort">Trend</th>
+                    <th onclick="sortTable(3, 'usa')">Var. Periodo</th>
+                    <th onclick="sortTable(4, 'usa')">Var. Giorn.</th>
+                    <th onclick="sortTable(5, 'usa')">Mediana/Media</th>
+                    <th onclick="sortTable(6, 'usa')">Dev.Std/Media</th>
+                </tr>
+            </thead>
+            <tbody id="tabellaUsa">
+                <!-- Righe dinamiche -->
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <script>
-function pollProgress(containerId, barId, textId, onComplete) {
-    const container = document.getElementById(containerId);
-    const bar = document.getElementById(barId);
-    const text = document.getElementById(textId);
-    
-    container.style.display = "block";
-    
-    const interval = setInterval(() => {
-        fetch('/progress.json?' + new Date().getTime())
-            .then(response => response.json())
-            .then(data => {
-                const percent = data.percent || 0;
-                bar.style.width = percent + "%";
-                text.innerText = data.status || `Progresso: ${percent}%`;
-                
-                if (percent >= 100) {
-                    clearInterval(interval);
-                    if (onComplete) onComplete(data);
-                }
-            })
-            .catch(err => {
-                console.error("Lettura progresso in corso...", err);
-            });
-    }, 1000);
-}
+    // Imposta valori di default all'apertura della pagina
+    window.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('selectArco').selectedIndex = 0; // Primo elemento in alto
+        document.getElementById('inputMediana').value = "0";     // 0% di default
+        document.getElementById('inputDev').value = "0";         // 0% di default
+    });
 
-function avviaAggiornamento() {
-    const btn = document.getElementById('btn-analysis');
-    btn.disabled = true;
-
-    document.getElementById('progress-container-results').style.display = 'none';
-
-    fetch('/run-update', { method: 'POST' })
-        .then(response => {
-            if (response.ok) {
-                pollProgress(
-                    'progress-container-analysis', 
-                    'progress-bar-analysis', 
-                    'status-text-analysis', 
-                    (finalData) => {
-                        alert(
-                            "Analisi di mercato completata!\n\n" +
-                            "• Azioni Italiane popolate: " + (finalData.it_count || 0) + "\n" +
-                            "  Media anni di popolamento: " + (finalData.it_avg_years !== undefined ? finalData.it_avg_years.toFixed(1) : "0.0") + " anni\n\n" +
-                            "• Azioni Americane popolate: " + (finalData.us_count || 0) + "\n" +
-                            "  Media anni di popolamento: " + (finalData.us_avg_years !== undefined ? finalData.us_avg_years.toFixed(1) : "0.0") + " anni"
-                        );
-                        btn.disabled = false;
-                    }
-                );
-            } else {
-                throw new Error("Errore server");
-            }
-        })
-        .catch(err => {
-            alert("Errore durante l'avvio dell'aggiornamento.");
-            btn.disabled = false;
-            document.getElementById('progress-container-analysis').style.display = 'none';
-        });
-}
-
-function caricaRisultati() {
-    const container = document.getElementById('progress-container-results');
-    const bar = document.getElementById('progress-bar-results-fill');
-    const text = document.getElementById('status-text-results');
-    
-    document.getElementById('progress-container-analysis').style.display = 'none';
-
-    container.style.display = 'block';
-    bar.style.width = '0%';
-    text.innerText = "Elaborazione risultati in corso...";
-
-    const params = {
-        market: document.getElementById('market').value,
-        timeframe: document.getElementById('timeframe').value,
-        median: document.getElementById('median').value,
-        std: document.getElementById('std').value
-    };
-
-    let progress = 0;
-    const fakeInterval = setInterval(() => {
-        progress += 25;
-        bar.style.width = progress + "%";
-        text.innerText = `Elaborazione risultati... ${progress}%`;
-        
-        if (progress >= 100) {
-            clearInterval(fakeInterval);
-            
-            fetch('/api/get-results', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(params)
-            })
-            .then(res => res.json())
-            .then(data => {
-                container.style.display = 'none';
-                const bodyIt = document.getElementById('body-it');
-                const bodyUs = document.getElementById('body-us');
-                bodyIt.innerHTML = ''; bodyUs.innerHTML = '';
-
-                if (!data || data.length === 0) {
-                    bodyIt.innerHTML = `<tr><td colspan="7">Nessun risultato trovato.</td></tr>`;
-                    bodyUs.innerHTML = `<tr><td colspan="7">Nessun risultato trovato.</td></tr>`;
-                    return;
-                }
-
-                data.forEach(item => {
-                    const row = `<tr>
-                        <td>${item.ticker}</td>
-                        <td>${item.price}</td>
-                        <td>${item.var_period}%</td>
-                        <td>${item.var_daily}%</td>
-                        <td>${item.med_mean_ratio}%</td>
-                        <td>${item.std_mean_ratio}%</td>
-                        <td><a href="https://it.investing.com/search/?q=${item.ticker.split('.')[0]}" target="_blank">Vai</a></td>
-                    </tr>`;
-                    
-                    if (item.ticker.endsWith('.MI') || item.ticker.endsWith('.AS')) {
-                        bodyIt.innerHTML += row;
-                    } else {
-                        bodyUs.innerHTML += row;
-                    }
-                });
-            })
-            .catch(err => {
-                container.style.display = 'none';
-                console.error(err);
-            });
-        }
-    }, 200);
-}
+    function sortTable(n, mercato) {
+        // Funzione di ordinamento colonne (escluso Trend)
+        console.log("Ordinamento colonna " + n + " per il mercato " + mercato);
+    }
 </script>
+
 </body>
 </html>
