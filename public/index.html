@@ -12,17 +12,25 @@
         .filter-group { display: flex; flex-direction: column; }
         .filter-group label { font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #555; }
         .filter-group select, .filter-group input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        
+        /* Tutti i pulsanti azzurri */
         button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
         button:hover { background-color: #0056b3; }
-        button.secondary { background-color: #6c757d; }
-        button.secondary:hover { background-color: #5a6268; }
+
+        /* Barra di caricamento */
+        #progressContainer { display: none; width: 100%; background-color: #e0e0e0; border-radius: 4px; margin-bottom: 20px; overflow: hidden; height: 20px; }
+        #progressBar { width: 0%; height: 100%; background-color: #007bff; text-align: center; color: white; font-size: 11px; line-height: 20px; transition: width 0.3s; }
+
         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
         th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
         th { background-color: #343a40; color: white; cursor: pointer; }
         th.no-sort { cursor: default; }
-        .text-green { color: #28a745; font-weight: bold; }
-        .text-red { color: #dc3545; font-weight: bold; }
-        .text-gray { color: #6c757d; font-weight: bold; }
+
+        /* Sfondi (badge) per i dati in percentuale */
+        .badge-green { background-color: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-weight: bold; display: inline-block; }
+        .badge-red { background-color: #f8d7da; color: #721c24; padding: 4px 8px; border-radius: 4px; font-weight: bold; display: inline-block; }
+        .badge-gray { background-color: #e2e3e5; color: #383d41; padding: 4px 8px; border-radius: 4px; font-weight: bold; display: inline-block; }
+
         .legend { font-size: 12px; margin-top: 15px; color: #666; font-style: italic; }
         a { text-decoration: none; color: #007bff; }
         a:hover { text-decoration: underline; }
@@ -33,10 +41,15 @@
 <div class="container">
     <h2>Analisi di Mercato</h2>
     
-    <!-- Pulsanti di azione -->
+    <!-- Pulsanti di azione (entrambi azzurri) -->
     <div class="action-buttons">
         <button id="btnAvvia">Avvia Analisi di Mercato</button>
-        <button id="btnRestituisci" class="secondary">Restituisci analisi di mercato</button>
+        <button id="btnRestituisci">Restituisci analisi di mercato</button>
+    </div>
+
+    <!-- Barra di caricamento -->
+    <div id="progressContainer">
+        <div id="progressBar">0%</div>
     </div>
 
     <!-- Filtri -->
@@ -115,44 +128,76 @@
 
 <script>
     window.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('selectArco').selectedIndex = 0; // Seleziona "1 Giorno" di default
+        document.getElementById('selectArco').selectedIndex = 0;
         document.getElementById('inputMediana').value = "0";
         document.getElementById('inputDev').value = "0";
         
-        document.getElementById('btnAvvia').addEventListener('click', eseguiAnalisi);
-        document.getElementById('btnRestituisci').addEventListener('click', caricaRisultati);
+        document.getElementById('btnAvvia').addEventListener('click', () => avviaProcessoConProgresso('avvia'));
+        document.getElementById('btnRestituisci').addEventListener('click', () => avviaProcessoConProgresso('restituisci'));
     });
 
-    async function eseguiAnalisi() {
-        await caricaRisultati();
-    }
+    async function avviaProcessoConProgresso(tipo) {
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '10%';
+        progressBar.innerText = '10%';
 
-    async function caricaRisultati() {
-        const payload = {
-            mercato: document.getElementById('selectMercato').value,
-            arcoTemporale: document.getElementById('selectArco').value,
-            minMediana: document.getElementById('inputMediana').value,
-            minDev: document.getElementById('inputDev').value
-        };
+        // Simula o avanza la barra mentre attende la risposta del server
+        let progresso = 10;
+        const intervallo = setInterval(() => {
+            if (progresso < 85) {
+                progresso += 15;
+                progressBar.style.width = progresso + '%';
+                progressBar.innerText = progresso + '%';
+            }
+        }, 150);
 
         try {
+            const payload = {
+                azione: tipo,
+                mercato: document.getElementById('selectMercato').value,
+                arcoTemporale: document.getElementById('selectArco').value,
+                minMediana: document.getElementById('inputMediana').value,
+                minDev: document.getElementById('inputDev').value
+            };
+
             const response = await fetch('/api/analizza', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
             const data = await response.json();
+
+            clearInterval(intervallo);
+            progressBar.style.width = '100%';
+            progressBar.innerText = '100%';
+
             popolaTabella('tabellaItalia', data.italia);
             popolaTabella('tabellaUsa', data.usa);
+
+            setTimeout(() => {
+                progressContainer.style.display = 'none';
+                progressBar.style.width = '0%';
+            }, 600);
+
         } catch (error) {
-            console.error("Errore durante il recupero dei risultati:", error);
+            clearInterval(intervallo);
+            console.error("Errore durante l'elaborazione:", error);
+            progressBar.style.backgroundColor = '#dc3545';
+            progressBar.innerText = 'Errore';
+            setTimeout(() => {
+                progressContainer.style.display = 'none';
+                progressBar.style.backgroundColor = '#007bff';
+            }, 2000);
         }
     }
 
-    function formattaColore(valoreStr) {
+    function ottieniClasseBadge(valoreStr) {
         const val = parseFloat(valoreStr);
-        if (isNaN(val) || val === 0) return 'text-gray';
-        return val > 0 ? 'text-green' : 'text-red';
+        if (isNaN(val) || val === 0) return 'badge-gray';
+        return val > 0 ? 'badge-green' : 'badge-red';
     }
 
     function popolaTabella(idBody, righe) {
@@ -162,17 +207,19 @@
         righe.forEach(item => {
             const tr = document.createElement('tr');
             
-            const classeVarPeriodo = formattaColore(item.varPeriodo);
-            const classeVarGiorn = formattaColore(item.varGiornaliera);
+            const badgePeriodo = ottieniClasseBadge(item.varPeriodo);
+            const badgeGiorn = ottieniClasseBadge(item.varGiornaliera);
+            const badgeMediana = ottieniClasseBadge(item.medianaMedia);
+            const badgeDev = ottieniClasseBadge(item.devStdMedia);
 
             tr.innerHTML = `
                 <td><a href="${item.link}" target="_blank">${item.titolo}</a></td>
                 <td>${item.prezzo}</td>
                 <td>${item.trend}</td>
-                <td class="${classeVarPeriodo}">${item.varPeriodo}%</td>
-                <td class="${classeVarGiorn}">${item.varGiornaliera}%</td>
-                <td>${item.medianaMedia}%</td>
-                <td>${item.devStdMedia}%</td>
+                <td><span class="${badgePeriodo}">${item.varPeriodo}%</span></td>
+                <td><span class="${badgeGiorn}">${item.varGiornaliera}%</span></td>
+                <td><span class="${badgeMediana}">${item.medianaMedia}%</span></td>
+                <td><span class="${badgeDev}">${item.devStdMedia}%</span></td>
             `;
             tbody.appendChild(tr);
         });
