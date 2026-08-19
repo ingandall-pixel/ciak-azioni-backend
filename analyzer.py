@@ -54,6 +54,28 @@ def fetch_yahoo_chart(ticker, range_str="5y"):
     except Exception:
         return None
 
+def get_sp500_tickers():
+    try:
+        url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+        tables = pd.read_html(url)
+        df = tables[0]
+        tickers = df['Symbol'].tolist()
+        tickers = [t.replace('.', '-') for t in tickers]
+        return tickers
+    except Exception:
+        return ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA']
+
+def get_nasdaq100_tickers():
+    try:
+        url = "https://en.wikipedia.org/wiki/NASDAQ-100"
+        tables = pd.read_html(url)
+        for df in tables:
+            for col in ['Ticker', 'Symbol']:
+                if col in df.columns:
+                    return df[col].tolist()
+    except Exception:
+        return []
+
 def download_data():
     market_data = {}
     if os.path.exists(DB_FILE):
@@ -63,90 +85,19 @@ def download_data():
         except Exception:
             market_data = {}
 
-    # Mercato USA completo (S&P 500 & NASDAQ 100 integrati)
-    tickers_us = [
-        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA', 'BRK-B', 'UNH', 'JNJ',
-        'XOM', 'JPM', 'V', 'PG', 'MA', 'HD', 'CVX', 'MRK', 'ABBV', 'PEP',
-        'KO', 'AVGO', 'COST', 'TMO', 'MCD', 'CSCO', 'ABT', 'WMT', 'ACN', 'DHR',
-        'LIN', 'DIS', 'NKE', 'ADBE', 'VZ', 'TXN', 'PM', 'NEE', 'RTX', 'QCOM',
-        'AMGN', 'HON', 'IBM', 'INTC', 'SBUX', 'CAT', 'GE', 'DE', 'LOW', 'SPGI',
-        'AMD', 'LMT', 'PLD', 'ISRG', 'BKNG', 'GILD', 'ADI', 'C', 'MDLZ', 'TJX',
-        'ZTS', 'MU', 'LRCX', 'PANW', 'SNPS', 'CDNS', 'SO', 'DUK', 'CL', 'ITW',
-        'BSX', 'PGR', 'CI', 'MO', 'BDX', 'EQIX', 'CB', 'SLB', 'SHW',
-        'ETN', 'ICE', 'CME', 'NSC', 'CSX', 'HUM', 'WM', 'FCX', 'USB', 'PNC',
-        'TGT', 'NOC', 'GD', 'CLX', 'AON', 'IT', 'EMR', 'EOG', 'PSX', 'VLO',
-        'PYPL', 'NFLX', 'INTU', 'AMAT', 'BK', 'BLK', 'AXP', 'BA', 'MMM', 'CHTR',
-        'PLTR', 'UBER', 'ABNB', 'SNOW', 'CRWD', 'DDOG', 'NET', 'TEAM', 'SHOP', 'SQ',
-        'COIN', 'ROKU', 'ZM', 'DOCU', 'PTON', 'TWLO', 'MRNA', 'BNTX', 'PFE', 'LLY',
-        'TMUS', 'T', 'CMCSA', 'PARA', 'WBD', 'FOXA', 'EA', 'TTWO', 'RBLX', 'DKNG',
-        'WYNN', 'LVS', 'MGM', 'MAR', 'HLT', 'DAL', 'UAL', 'AAL', 'LUV', 'GM',
-        'F', 'RIVN', 'LCID', 'NIO', 'XPEV', 'LI', 'SNAP', 'PINS', 'SPOT', 'HOOD',
-        'ORCL', 'CRM', 'NOW', 'REGN', 'VRTX', 'FISV', 'ADSK', 'MNST', 'O', 'KDP',
-        'AZN', 'NVO', 'ASML', 'SHEL', 'TTE', 'BP', 'BHP', 'RY', 'TD', 'HDB',
-        'SNY', 'GSK', 'MELI', 'PDD', 'JD', 'BIDU', 'BABA', 'TSM', 'NICE',
-        # Intero S&P 500 / Liquid US Stocks
-        'A', 'AAP', 'ABAC', 'ABCB', 'ACGL', 'ACM', 'ADC', 'ADM', 'ADP', 'AEE',
-        'AEP', 'AES', 'AFL', 'AIG', 'AIZ', 'AJG', 'AKAM', 'ALB', 'ALGN', 'ALK',
-        'ALL', 'ALLE', 'AMCR', 'AME', 'AMP', 'AMT', 'ANET', 'ANSS', 'AOS', 'APA',
-        'APD', 'APH', 'APTV', 'ARE', 'ATO', 'AVB', 'AVY', 'AWK', 'AXON', 'AZO',
-        'BAC', 'BALL', 'BAX', 'BBY', 'BEN', 'BF-B', 'BG', 'BIIB', 'BIO', 'BKR',
-        'BLDR', 'BMY', 'BR', 'BRO', 'BWA', 'BX', 'BXP', 'CAG', 'CAH', 'CARR',
-        'CBOE', 'CBRE', 'CCI', 'CCL', 'CDW', 'CE', 'CEG', 'CF', 'CFG', 'CHD',
-        'CHRW', 'CINF', 'CMA', 'CMG', 'CMI', 'CMS', 'CNC', 'CNP', 'COF', 'COO',
-        'COP', 'COR', 'CPAY', 'CPB', 'CPRT', 'CPT', 'CRL', 'CSX', 'CTAS', 'CTLT',
-        'CTRA', 'CTSH', 'CTVA', 'CVS', 'CZR', 'D', 'DAY', 'DD', 'DECK', 'DFS',
-        'DG', 'DGX', 'DHI', 'DLR', 'DLTR', 'DOV', 'DOW', 'DPZ', 'DRI', 'DTE',
-        'DVA', 'DVN', 'EA', 'EBAY', 'ECL', 'ED', 'EFX', 'EG', 'EIX', 'EL',
-        'ELV', 'EMN', 'ENPH', 'EPAM', 'EQR', 'ERIE', 'ES', 'ESS', 'ETR', 'EVRG',
-        'EW', 'EXC', 'EXPD', 'EXPE', 'EXR', 'FANG', 'FAST', 'FDS', 'FDX', 'FE',
-        'FFIV', 'FI', 'FITB', 'FLT', 'FMC', 'FOX', 'FRT', 'FSLR', 'FTNT', 'FTV',
-        'GDDY', 'GEHC', 'GEN', 'GPC', 'GIS', 'GL', 'GLW', 'GNRC', 'GPN', 'GRMN',
-        'GS', 'GWW', 'HAL', 'HAS', 'HBAN', 'HCA', 'HES', 'HIG', 'HII', 'HOLX',
-        'HPE', 'HPQ', 'HRL', 'HSIC', 'HST', 'HSY', 'HUBB', 'HWM', 'IDXX', 'IEX',
-        'IFF', 'ILMN', 'INCY', 'INVH', 'IPG', 'IQV', 'IR', 'IRM', 'IVZ', 'J',
-        'JBHT', 'JBL', 'JCI', 'JKHY', 'JNPR', 'K', 'KEY', 'KEYS', 'KHC', 'KIM',
-        'KLAC', 'KMB', 'KMI', 'KMX', 'KR', 'KVUE', 'L', 'LDOS', 'LEN', 'LH',
-        'LHX', 'LKQ', 'LLY', 'LNT', 'LULU', 'LW', 'LYB', 'LYV', 'MAA', 'MAS',
-        'MCHP', 'MCK', 'MDT', 'MET', 'MHK', 'MKC', 'MKTX', 'MLM', 'MMC', 'MOH',
-        'MOS', 'MPC', 'MPWR', 'MRSH', 'MS', 'MSCI', 'MSI', 'MTB', 'MTCH', 'MTD',
-        'NCLH', 'NDAQ', 'NDSN', 'NEM', 'NI', 'NLOK', 'NOC', 'NRG', 'NTAP', 'NTRS',
-        'NUE', 'NVR', 'NXPI', 'ODFL', 'OGN', 'OKE', 'OMC', 'ON', 'ORLY', 'OTIS',
-        'OXY', 'PAYC', 'PAYX', 'PCAR', 'PCG', 'PEAK', 'PEG', 'PFG', 'PGR', 'PH',
-        'PHM', 'PKG', 'PNR', 'PNW', 'PODD', 'POOL', 'PPG', 'PPL', 'PRU', 'PSA',
-        'PTC', 'PWR', 'QRVO', 'RCL', 'REG', 'RF', 'RHI', 'RJF', 'RL', 'RMD',
-        'ROK', 'ROL', 'ROP', 'ROST', 'RSG', 'RVTY', 'SBAC', 'SCHW', 'SEDG', 'SEE',
-        'SJM', 'SNA', 'SO', 'SRE', 'STE', 'STLD', 'STT', 'STX', 'STZ', 'SWK',
-        'SWKS', 'SYF', 'SYK', 'SYY', 'TAP', 'TDG', 'TDY', 'TECH', 'TEL', 'TER',
-        'TFC', 'TFX', 'TSCO', 'TSN', 'TT', 'TXT', 'TYL', 'UA', 'UAA', 'UDR',
-        'UHS', 'ULTA', 'UNP', 'UPS', 'URI', 'VLO', 'VLTO', 'VMC', 'VRSK', 'VRSN',
-        'VST', 'VTR', 'VTRS', 'WAB', 'WAT', 'WBA', 'WDC', 'WEC', 'WELL', 'WFC',
-        'WMB', 'WRB', 'WST', 'WTW', 'WY', 'XEL', 'XYL', 'YUM', 'ZBH', 'ZBRA',
-        'ZION'
-    ]
-
-    # Mercato Italiano completo
+    update_progress(5, "Recupero elenchi completi dai mercati...")
+    
+    us_tickers_raw = list(set(get_sp500_tickers() + get_nasdaq100_tickers()))
+    
+    # Elenco pulito e corretto con ENEL.MI e i principali titoli italiani
     tickers_it = [
-        'A2A.MI', 'AMP.MI', 'AZM.MI', 'BAMI.MI', 'BMED.MI', 'BMPS.MI', 'BPER.MI',
-        'ENEL.MI', 'ENI.MI', 'ERG.MI', 'EXOR.AS', 'G.MI', 'HER.MI', 'ISP.MI',
-        'LDO.MI', 'MB.MI', 'MONC.MI', 'NEXI.MI', 'PST.MI', 'PRY.MI', 'RACE.MI',
-        'SRG.MI', 'STLAM.MI', 'STM.MI', 'TEN.MI', 'TIT.MI', 'TRN.MI', 'UCG.MI',
-        'UNI.MI', 'CPR.MI', 'REC.MI', 'SAIPEM.MI',
-        'AEF.MI', 'ARN.MI', 'ANIM.MI', 'ASC.MI', 'AVIO.MI', 'BFF.MI', 'BZU.MI',
-        'CMB.MI', 'CEM.MI', 'DEA.MI', 'ELC.MI', 'ENAV.MI', 'FCT.MI', 'FILA.MI',
-        'GEO.MI', 'GVS.MI', 'IG.MI', 'IGD.MI', 'ILL.MI', 'INW.MI', 'IP.MI',
-        'ITM.MI', 'IVG.MI', 'JUVE.MI', 'LUVE.MI', 'MAIRE.MI', 'MN.MI', 'MOL.MI',
-        'OVS.MI', 'REY.MI', 'SAB.MI', 'SL.MI', 'SES.MI', 'SFER.MI', 'SOL.MI',
-        'TIP.MI', 'VLS.MI', 'WIIT.MI', 'PRT.MI', 'DANIELI.MI', 'ESPRINET.MI',
-        'GEFRAN.MI', 'KME.MI', 'MARR.MI', 'MUTUIONLINE.MI', 'PIAGGIO.MI',
-        'RECORDATI.MI', 'TAMBURI.MI', 'VALSOIA.MI', 'ZUCCHI.MI', 'TIS.MI',
-        'ERS.MI', 'SESA.MI', 'MONDADORI.MI', 'TCI.MI', 'TME.MI', 'TO.MI',
-        'TWO.MI', 'UNIR.MI', 'VNE.MI'
+        'ENEL.MI', 'ISP.MI', 'UCG.MI', 'ENI.MI', 'G.MI', 'RACE.MI', 'STLAM.MI', 'STM.MI', 
+        'TRN.MI', 'SRG.MI', 'PRY.MI', 'MONC.MI', 'MB.MI', 'LDO.MI', 'SPM.MI', 'NEXI.MI', 
+        'REC.MI', 'HER.MI', 'A2A.MI', 'IG.MI', 'BAMI.MI', 'BPER.MI', 'BMPS.MI', 'AZM.MI', 
+        'FINECO.MI', 'PST.MI', 'EXOR.AS', 'UNIS.MI', 'IP.MI', 'INW.MI', 'CPR.MI', 'DANIELI.MI'
     ]
 
-    tickers_it = list(dict.fromkeys(tickers_it))
-    tickers_us = list(dict.fromkeys(tickers_us))
-
-    all_tickers = [(t, 'IT') for t in tickers_it] + [(t, 'US') for t in tickers_us]
+    all_tickers = [(t, 'IT') for t in tickers_it] + [(t, 'US') for t in us_tickers_raw]
     total = len(all_tickers)
 
     for idx, (sym, market) in enumerate(all_tickers):
@@ -171,7 +122,7 @@ def download_data():
                 sorted_dates = sorted(fetched_history.keys())
                 market_data[sym] = {d: fetched_history[d] for d in sorted_dates}
         
-        time.sleep(1.2)
+        time.sleep(0.3)
 
     it_years_list, us_years_list = [], []
     for sym, hist in market_data.items():
@@ -253,8 +204,9 @@ def analyze(market, tf, median_markup, std_ratio):
         std_ratio_pct = (std_val / mean_val) * 100.0
 
         if med_markup_pct >= median_markup and std_ratio_pct >= std_ratio:
-            curr_price = prices[-1]
-            prev_price = prices[0]
+            # Prende l'effettivo prezzo corrente (ultimo giorno disponibile)
+            curr_price = history[dates[-1]]
+            prev_price = history[filtered_dates[0]]
             var_period = ((curr_price - prev_price) / prev_price) * 100.0
 
             all_prices = [history[d] for d in dates]
