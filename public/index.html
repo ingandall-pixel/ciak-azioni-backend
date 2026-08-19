@@ -3,252 +3,307 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analisi di Mercato</title>
+    <title>CIAK!-AZIONI</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; color: #333; }
-        .container { max-width: 1200px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .action-buttons { display: flex; gap: 10px; margin-bottom: 20px; }
-        .filters { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end; }
-        .filter-group { display: flex; flex-direction: column; }
-        .filter-group label { font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #555; }
-        .filter-group select, .filter-group input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        
-        /* Entrambi i pulsanti rigorosamente azzurri e identici */
-        .btn-azzurro { padding: 10px 15px; background-color: #007bff !important; color: white !important; border: none !important; border-radius: 4px; cursor: pointer; }
-        .btn-azzurro:hover { background-color: #0056b3 !important; }
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --border: #334155;
+            --success: #22c55e;
+        }
 
-        /* Barra di caricamento */
-        #progressContainer { display: none; width: 100%; background-color: #e0e0e0; border-radius: 4px; margin-bottom: 20px; overflow: hidden; height: 20px; }
-        #progressBar { width: 0%; height: 100%; background-color: #007bff; text-align: center; color: white; font-size: 11px; line-height: 20px; transition: width 0.3s; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
 
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #343a40; color: white; cursor: pointer; }
-        th.no-sort { cursor: default; }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
 
-        /* Sfondi (badge) per i dati in percentuale */
-        .badge-green { background-color: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-weight: bold; display: inline-block; }
-        .badge-red { background-color: #f8d7da; color: #721c24; padding: 4px 8px; border-radius: 4px; font-weight: bold; display: inline-block; }
-        .badge-gray { background-color: #e2e3e5; color: #383d41; padding: 4px 8px; border-radius: 4px; font-weight: bold; display: inline-block; }
+        header h1 {
+            font-size: 2.2rem;
+            margin: 0;
+            background: linear-gradient(90deg, #60a5fa, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
 
-        .legend { font-size: 12px; margin-top: 15px; color: #666; font-style: italic; }
-        a { text-decoration: none; color: #007bff; }
-        a:hover { text-decoration: underline; }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .controls-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .ios-picker {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            color: var(--text-color);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 1rem;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        select, input {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            color: var(--text-color);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .btn-container {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            flex: 1;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background-color: #334155;
+        }
+
+        .btn-secondary:hover {
+            background-color: #475569;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: #1e293b;
+            color: var(--text-muted);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th:hover {
+            color: var(--text-color);
+        }
+
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        a.ticker-link {
+            color: #60a5fa;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        a.ticker-link:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
+    <div class="container">
+        <header>
+            <h1>CIAK!-AZIONI</h1>
+        </header>
 
-<div class="container">
-    <h2>Analisi di Mercato</h2>
-    
-    <!-- Pulsanti di azione entrambi con classe btn-azzurro -->
-    <div class="action-buttons">
-        <button id="btnAvvia" class="btn-azzurro">Avvia Analisi di Mercato</button>
-        <button id="btnRestituisci" class="btn-azzurro">Restituisci analisi di mercato</button>
-    </div>
+        <div class="controls-card">
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label>Timeframe</label>
+                    <select id="tf-select">
+                        <option value="1d">1 Giorno</option>
+                        <option value="1w">1 Settimana</option>
+                        <option value="1m" selected>1 Mese</option>
+                        <option value="1y">1 Anno</option>
+                        <option value="5y">5 Anni</option>
+                    </select>
+                </div>
 
-    <!-- Barra di caricamento -->
-    <div id="progressContainer">
-        <div id="progressBar">0%</div>
-    </div>
+                <div class="control-group">
+                    <label>Mediana (%)</label>
+                    <input type="number" id="median-val" class="ios-picker" value="50" min="1" max="100" step="1">
+                </div>
 
-    <!-- Filtri -->
-    <div class="filters">
-        <div class="filter-group">
-            <label for="selectMercato">Mercato</label>
-            <select id="selectMercato">
-                <option value="tutti">Tutti</option>
-                <option value="italia">Italia</option>
-                <option value="usa">USA</option>
-            </select>
+                <div class="control-group">
+                    <label>Deviazione Standard (%)</label>
+                    <input type="number" id="std-val" class="ios-picker" value="10" min="1" max="100" step="1">
+                </div>
+            </div>
+
+            <div class="btn-container">
+                <button class="btn btn-secondary" onclick="avviaAnalisiMercato()">Avvia analisi di mercato</button>
+                <button class="btn" onclick="restituisciRisultati()">Restituisci risultati</button>
+            </div>
         </div>
 
-        <div class="filter-group">
-            <label for="selectArco">Arco Temporale</label>
-            <select id="selectArco">
-                <option value="1d">1 Giorno</option>
-                <option value="1m">1 Mese</option>
-                <option value="3m">3 Mesi</option>
-                <option value="6m">6 Mesi</option>
-                <option value="1y">1 Anno</option>
-                <option value="5y">5 Anni</option>
-            </select>
-        </div>
-
-        <div class="filter-group">
-            <label for="inputMediana">Min Mediana / Media (%)</label>
-            <input type="number" id="inputMediana" value="0" step="1">
-        </div>
-
-        <div class="filter-group">
-            <label for="inputDev">Min Dev. Std / Media (%)</label>
-            <input type="number" id="inputDev" value="0" step="1">
+        <div class="table-container">
+            <table id="results-table">
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0)">Azione ↕</th>
+                        <th onclick="sortTable(1)">Prezzo ↕</th>
+                        <th>Trend</th>
+                        <th onclick="sortTable(3)">Perf 1 ↕</th>
+                        <th onclick="sortTable(4)">Perf 2 ↕</th>
+                        <th onclick="sortTable(5)">Perf 3 ↕</th>
+                        <th onclick="sortTable(6)">Perf 4 ↕</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <tr>
+                        <td><a href="https://www.investing.com/search/?q=ENEL" target="_blank" class="ticker-link">ENEL</a></td>
+                        <td>6.54</td>
+                        <td><img src="" alt="Trend" style="height: 30px;"></td>
+                        <td>+1.2%</td>
+                        <td>-0.5%</td>
+                        <td>+3.4%</td>
+                        <td>+2.1%</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <div class="legend">
-        * Legenda Filtri: Mediana / Media (Min: -100%, Max: +100%). Deviazione Std / Media (Min: 0%, Max: 1000%). I filtri agiscono come limiti inferiori
-    </div>
-
-    <!-- Tabelle Risultati -->
-    <div id="risultatiContainer">
-        <h3>Azioni Italiane</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th onclick="ordinaTabella('tabellaItalia', 0, false)">Titolo</th>
-                    <th onclick="ordinaTabella('tabellaItalia', 1, true)">Prezzo</th>
-                    <th class="no-sort">Trend</th>
-                    <th onclick="ordinaTabella('tabellaItalia', 3, true)">Var. Periodo</th>
-                    <th onclick="ordinaTabella('tabellaItalia', 4, true)">Var. Giorn.</th>
-                    <th onclick="ordinaTabella('tabellaItalia', 5, true)">Mediana/Media</th>
-                    <th onclick="ordinaTabella('tabellaItalia', 6, true)">Dev.Std/Media</th>
-                </tr>
-            </thead>
-            <tbody id="tabellaItalia"></tbody>
-        </table>
-
-        <h3 style="margin-top: 30px;">Azioni Americane</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th onclick="ordinaTabella('tabellaUsa', 0, false)">Titolo</th>
-                    <th onclick="ordinaTabella('tabellaUsa', 1, true)">Prezzo</th>
-                    <th class="no-sort">Trend</th>
-                    <th onclick="ordinaTabella('tabellaUsa', 3, true)">Var. Periodo</th>
-                    <th onclick="ordinaTabella('tabellaUsa', 4, true)">Var. Giorn.</th>
-                    <th onclick="ordinaTabella('tabellaUsa', 5, true)">Mediana/Media</th>
-                    <th onclick="ordinaTabella('tabellaUsa', 6, true)">Dev.Std/Media</th>
-                </tr>
-            </thead>
-            <tbody id="tabellaUsa"></tbody>
-        </table>
-    </div>
-</div>
-
-<script>
-    window.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('selectArco').selectedIndex = 0;
-        document.getElementById('inputMediana').value = "0";
-        document.getElementById('inputDev').value = "0";
-        
-        document.getElementById('btnAvvia').addEventListener('click', () => avviaProcessoConProgresso('avvia'));
-        document.getElementById('btnRestituisci').addEventListener('click', () => avviaProcessoConProgresso('restituisci'));
-    });
-
-    async function avviaProcessoConProgresso(tipo) {
-        const progressContainer = document.getElementById('progressContainer');
-        const progressBar = document.getElementById('progressBar');
-        
-        progressContainer.style.display = 'block';
-        progressBar.style.width = '10%';
-        progressBar.innerText = '10%';
-
-        let progresso = 10;
-        const intervallo = setInterval(() => {
-            if (progresso < 85) {
-                progresso += 15;
-                progressBar.style.width = progresso + '%';
-                progressBar.innerText = progresso + '%';
+    <script>
+        async function avviaAnalisiMercato() {
+            alert("Avvio aggiornamento incrementale di mercato sul server...");
+            try {
+                const response = await fetch('/api/update-market', { method: 'POST' });
+                const result = await response.json();
+                alert(result.message || "Operazione completata");
+            } catch (error) {
+                console.error("Errore:", error);
             }
-        }, 150);
-
-        try {
-            const payload = {
-                azione: tipo,
-                mercato: document.getElementById('selectMercato').value,
-                arcoTemporale: document.getElementById('selectArco').value,
-                minMediana: document.getElementById('inputMediana').value,
-                minDev: document.getElementById('inputDev').value
-            };
-
-            const response = await fetch('/api/analizza', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const data = await response.json();
-
-            clearInterval(intervallo);
-            progressBar.style.width = '100%';
-            progressBar.innerText = '100%';
-
-            popolaTabella('tabellaItalia', data.italia);
-            popolaTabella('tabellaUsa', data.usa);
-
-            setTimeout(() => {
-                progressContainer.style.display = 'none';
-                progressBar.style.width = '0%';
-            }, 600);
-
-        } catch (error) {
-            clearInterval(intervallo);
-            console.error("Errore durante l'elaborazione:", error);
-            progressBar.style.backgroundColor = '#dc3545';
-            progressBar.innerText = 'Errore';
-            setTimeout(() => {
-                progressContainer.style.display = 'none';
-                progressBar.style.backgroundColor = '#007bff';
-            }, 2000);
         }
-    }
 
-    function ottieniClasseBadge(valoreStr) {
-        const val = parseFloat(valoreStr);
-        if (isNaN(val) || val === 0) return 'badge-gray';
-        return val > 0 ? 'badge-green' : 'badge-red';
-    }
+        async function restituisciRisultati() {
+            const timeframe = document.getElementById("tf-select").value;
+            const median = document.getElementById("median-val").value;
+            const std = document.getElementById("std-val").value;
 
-    function popolaTabella(idBody, righe) {
-        const tbody = document.getElementById(idBody);
-        tbody.innerHTML = '';
+            try {
+                const response = await fetch('/api/get-results', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ timeframe, median, std })
+                });
+                
+                const data = await response.json();
+                const tbody = document.getElementById("table-body");
+                tbody.innerHTML = "";
 
-        righe.forEach(item => {
-            const tr = document.createElement('tr');
-            
-            const badgePeriodo = ottieniClasseBadge(item.varPeriodo);
-            const badgeGiorn = ottieniClasseBadge(item.varGiornaliera);
-            const badgeMediana = ottieniClasseBadge(item.medianaMedia);
-            const badgeDev = ottieniClasseBadge(item.devStdMedia);
-
-            tr.innerHTML = `
-                <td><a href="${item.link}" target="_blank">${item.titolo}</a></td>
-                <td>${item.prezzo}</td>
-                <td>${item.trend}</td>
-                <td><span class="${badgePeriodo}">${item.varPeriodo}%</span></td>
-                <td><span class="${badgeGiorn}">${item.varGiornaliera}%</span></td>
-                <td><span class="${badgeMediana}">${item.medianaMedia}%</span></td>
-                <td><span class="${badgeDev}">${item.devStdMedia}%</span></td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    let direzioniOrdinamento = {};
-    function ordinaTabella(idBody, colIndex, isNumerico) {
-        const tbody = document.getElementById(idBody);
-        const righe = Array.from(tbody.querySelectorAll('tr'));
-        
-        const chiave = `${idBody}-${colIndex}`;
-        let crescente = direzioniOrdinamento[chiave] = !direzioniOrdinamento[chiave];
-
-        righe.sort((a, b) => {
-            let valA = a.children[colIndex].innerText.replace('%', '').trim();
-            let valB = b.children[colIndex].innerText.replace('%', '').trim();
-
-            if (isNumerico) {
-                valA = parseFloat(valA) || 0;
-                valB = parseFloat(valB) || 0;
-                return crescente ? valA - valB : valB - valA;
-            } else {
-                return crescente ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                data.forEach(item => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td><a href="${item.url}" target="_blank" class="ticker-link">${item.ticker}</a></td>
+                        <td>${item.prezzo}</td>
+                        <td><img src="${item.trend_img}" alt="Trend" style="height: 30px;"></td>
+                        <td>${item.perf1}%</td>
+                        <td>${item.perf2}%</td>
+                        <td>${item.perf3}%</td>
+                        <td>${item.perf4}%</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error("Errore nel recupero dei risultati:", error);
             }
-        });
+        }
 
-        tbody.innerHTML = '';
-        righe.forEach(tr => tbody.appendChild(tr));
-    }
-</script>
+        let sortDirection = false;
 
+        function sortTable(columnIndex) {
+            const tbody = document.getElementById("table-body");
+            const rows = Array.from(tbody.querySelectorAll("tr"));
+            
+            sortDirection = !sortDirection;
+
+            rows.sort((rowA, rowB) => {
+                const cellA = rowA.querySelectorAll("td")[columnIndex].innerText.trim();
+                const cellB = rowB.querySelectorAll("td")[columnIndex].innerText.trim();
+
+                const numA = parseFloat(cellA.replace(/[^0-9.-]+/g, ""));
+                const numB = parseFloat(cellB.replace(/[^0-9.-]+/g, ""));
+
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    return sortDirection ? numA - numB : numB - numA;
+                } else {
+                    return sortDirection ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
+                }
+            });
+
+            tbody.innerHTML = "";
+            rows.forEach(row => tbody.appendChild(row));
+        }
+    </script>
 </body>
 </html>

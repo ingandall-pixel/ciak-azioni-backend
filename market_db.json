@@ -1,10 +1,1 @@
-{
-  "italiano": [
-    { "azione": "Enel", "prezzo": "6.85 €", "var_periodo": "+12.4%" },
-    { "azione": "Intesa Sanpaolo", "prezzo": "3.50 €", "var_periodo": "+8.1%" }
-  ],
-  "americano": [
-    { "azione": "Apple", "prezzo": "$180.50", "var_periodo": "+15.2%" },
-    { "azione": "Tesla", "prezzo": "$210.00", "var_periodo": "-3.4%" }
-  ]
-}
+{}
