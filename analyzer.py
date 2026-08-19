@@ -1,98 +1,51 @@
-import os
-import sys
-import json
 import numpy as np
 from datetime import datetime, timedelta
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_FILE = os.path.join(BASE_DIR, 'market_db.json')
+def calcola_statistiche_periodo(storico, arco_temporale):
+    """
+    Calcola Mediana/Media e Dev.Std/Media filtrando i dati in base all'arco temporale scelto:
+    '1m' (1 Mese), '3m' (3 Mesi), '6m' (6 Mesi), '1y' (1 Anno), '5y' (5 Anni)
+    """
+    if not storico:
+        return 0.0, 0.0
 
-def analyze_market(market_filter="ALL", timeframe="1m", min_median=-100.0, min_std=0.0):
-    if not os.path.exists(DB_FILE):
-        print(json.dumps([]))
-        return
+    oggi = datetime.now().date()
+    
+    # Determinazione della data di inizio in base all'arco temporale
+    if arco_temporale == '1m':
+        data_inizio = oggi - timedelta(days=30)
+    elif arco_temporale == '3m':
+        data_inizio = oggi - timedelta(days=90)
+    elif arco_temporale == '6m':
+        data_inizio = oggi - timedelta(days=180)
+    elif arco_temporale == '1y':
+        data_inizio = oggi - timedelta(days=365)
+    elif arco_temporale == '5y':
+        data_inizio = oggi - timedelta(days=5*365)
+    else:
+        data_inizio = oggi - timedelta(days=365) # Default 1 Anno
 
-    try:
-        with open(DB_FILE, 'r', encoding='utf-8') as f:
-            market_data = json.load(f)
-    except Exception:
-        print(json.dumps([]))
-        return
+    # Filtriamo lo storico per l'intervallo temporale richiesto
+    storico_filtrato = [
+        d for d in storico 
+        if datetime.strptime(d['date'], '%Y-%m-%d').date() >= data_inizio
+    ]
 
-    tf_days = {
-        "1w": 7,
-        "1m": 30,
-        "3m": 90,
-        "6m": 180,
-        "1y": 365,
-        "ytd": (datetime.now() - datetime(datetime.now().year, 1, 1)).days
-    }
-    days_back = tf_days.get(timeframe, 30)
+    if not storico_filtrato:
+        return 0.0, 0.0
 
-    results = []
-    cutoff_date = datetime.now() - timedelta(days=days_back)
+    # Estraiamo i prezzi o i ritorni giornalieri (usiamo i prezzi di chiusura o variazioni secondo la tua logica)
+    prezzi = [float(d['close']) for d in storico_filtrato if 'close' in d]
+    
+    if len(prezzi) < 2:
+        return 0.0, 0.0
 
-    for ticker, history in market_data.items():
-        is_it = ticker.endswith('.MI') or ticker.endswith('.AS')
-        
-        if market_filter == "IT" and not is_it:
-            continue
-        if market_filter == "US" and is_it:
-            continue
+    media = np.mean(prezzi)
+    mediana = np.median(prezzi)
+    dev_std = np.std(prezzi)
 
-        if not history or len(history) < 2:
-            continue
+    # Rapporti percentuali richiesti
+    pct_mediana_media = (mediana / media) * 100 if media != 0 else 0.0
+    pct_dev_media = (dev_std / media) * 100 if media != 0 else 0.0
 
-        dates = sorted(history.keys())
-        prices = [history[d] for d in dates]
-        
-        current_price = prices[-1]
-        var_daily = ((prices[-1] - prices[-2]) / prices[-2]) * 100 if len(prices) >= 2 else 0.0
-
-        filtered_prices = []
-        for d_str, price in history.items():
-            try:
-                dt = datetime.strptime(d_str, '%Y-%m-%d')
-                if dt >= cutoff_date:
-                    filtered_prices.append(price)
-            except Exception:
-                continue
-
-        if len(filtered_prices) < 2:
-            filtered_prices = prices[-min(len(prices), days_back):]
-
-        start_period_price = filtered_prices[0]
-        var_period = ((current_price - start_period_price) / start_period_price) * 100
-
-        arr = np.array(filtered_prices)
-        mean_val = np.mean(arr)
-        median_val = np.median(arr)
-        std_val = np.std(arr)
-
-        if mean_val == 0:
-            continue
-
-        med_mean_ratio = (median_val / mean_val) * 100
-        std_mean_ratio = (std_val / mean_val) * 100
-
-        # Filtri come limiti minimi inferiori (>=)
-        if med_mean_ratio >= min_median and std_mean_ratio >= min_std:
-            results.append({
-                "ticker": ticker,
-                "price": round(current_price, 2),
-                "var_period": round(var_period, 2),
-                "var_daily": round(var_daily, 2),
-                "med_mean_ratio": round(med_mean_ratio, 2),
-                "std_mean_ratio": round(std_mean_ratio, 2)
-            })
-
-    print(json.dumps(results))
-
-if __name__ == "__main__":
-    m_filter = sys.argv[1] if len(sys.argv) > 1 else "ALL"
-    t_frame = sys.argv[2] if len(sys.argv) > 2 else "1m"
-    m_med = float(sys.argv[3]) if len(sys.argv) > 3 else -100.0
-    m_std = float(sys.argv[4]) if len(sys.argv) > 4 else 0.0
-
-    if m_filter != "download":
-        analyze_market(m_filter, t_frame, m_med, m_std)
+    return round(pct_mediana_media, 2), round(pct_dev_media, 2)
