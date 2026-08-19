@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 def calcola_statistiche_periodo(storico, arco_temporale):
     """
     Calcola Mediana/Media e Dev.Std/Media filtrando i dati in base all'arco temporale scelto:
-    '1m' (1 Mese), '3m' (3 Mesi), '6m' (6 Mesi), '1y' (1 Anno), '5y' (5 Anni)
+    '1d' (1 Giorno), '1m' (1 Mese), '3m' (3 Mesi), '6m' (6 Mesi), '1y' (1 Anno), '5y' (5 Anni)
     """
     if not storico:
         return 0.0, 0.0
@@ -12,7 +12,9 @@ def calcola_statistiche_periodo(storico, arco_temporale):
     oggi = datetime.now().date()
     
     # Determinazione della data di inizio in base all'arco temporale
-    if arco_temporale == '1m':
+    if arco_temporale == '1d':
+        data_inizio = oggi - timedelta(days=1)
+    elif arco_temporale == '1m':
         data_inizio = oggi - timedelta(days=30)
     elif arco_temporale == '3m':
         data_inizio = oggi - timedelta(days=90)
@@ -34,10 +36,14 @@ def calcola_statistiche_periodo(storico, arco_temporale):
     if not storico_filtrato:
         return 0.0, 0.0
 
-    # Estraiamo i prezzi o i ritorni giornalieri (usiamo i prezzi di chiusura o variazioni secondo la tua logica)
+    # Estraiamo i prezzi di chiusura
     prezzi = [float(d['close']) for d in storico_filtrato if 'close' in d]
     
-    if len(prezzi) < 2:
+    if len(prezzi) < 1:
+        return 0.0, 0.0
+    
+    # Se abbiamo un solo prezzo (es. per 1 giorno), gestiamo il calcolo per evitare divisioni per zero o array vuoti
+    if len(prezzi) == 1:
         return 0.0, 0.0
 
     media = np.mean(prezzi)
