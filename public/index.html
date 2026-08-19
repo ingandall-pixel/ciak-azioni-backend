@@ -13,9 +13,9 @@
         .filter-group label { font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #555; }
         .filter-group select, .filter-group input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
         
-        /* Tutti i pulsanti azzurri */
-        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        button:hover { background-color: #0056b3; }
+        /* Entrambi i pulsanti rigorosamente azzurri e identici */
+        .btn-azzurro { padding: 10px 15px; background-color: #007bff !important; color: white !important; border: none !important; border-radius: 4px; cursor: pointer; }
+        .btn-azzurro:hover { background-color: #0056b3 !important; }
 
         /* Barra di caricamento */
         #progressContainer { display: none; width: 100%; background-color: #e0e0e0; border-radius: 4px; margin-bottom: 20px; overflow: hidden; height: 20px; }
@@ -41,10 +41,10 @@
 <div class="container">
     <h2>Analisi di Mercato</h2>
     
-    <!-- Pulsanti di azione (entrambi azzurri) -->
+    <!-- Pulsanti di azione entrambi con classe btn-azzurro -->
     <div class="action-buttons">
-        <button id="btnAvvia">Avvia Analisi di Mercato</button>
-        <button id="btnRestituisci">Restituisci analisi di mercato</button>
+        <button id="btnAvvia" class="btn-azzurro">Avvia Analisi di Mercato</button>
+        <button id="btnRestituisci" class="btn-azzurro">Restituisci analisi di mercato</button>
     </div>
 
     <!-- Barra di caricamento -->
@@ -144,7 +144,6 @@
         progressBar.style.width = '10%';
         progressBar.innerText = '10%';
 
-        // Simula o avanza la barra mentre attende la risposta del server
         let progresso = 10;
         const intervallo = setInterval(() => {
             if (progresso < 85) {
