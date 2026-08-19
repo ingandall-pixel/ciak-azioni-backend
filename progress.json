@@ -1,8 +1,1 @@
-{
-  "percent": 0,
-  "status": "In attesa di avvio...",
-  "it_count": 0,
-  "it_avg_years": 0.0,
-  "us_count": 0,
-  "us_avg_years": 0.0
-}
+{"percent": 100, "status": "Completato!", "it_count": 69, "it_avg_years": 4.9, "us_count": 521, "us_avg_years": 5.0}

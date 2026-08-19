@@ -1,12 +1,32 @@
 import os
 import json
+import time
 from datetime import datetime, timedelta
 
+# Importiamo la funzione di download da analyzer se disponibile
+try:
+    from analyzer import download_data
+except ImportError:
+    download_data = None
+
 DB_FILE = "market_db.json"
+PROGRESS_FILE = "progress.json"
+
+def update_progress(percent, status, extra_data=None):
+    data = {"percent": percent, "status": status}
+    if extra_data:
+        data.update(extra_data)
+    try:
+        with open(PROGRESS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f)
+            f.flush()
+            os.fsync(f.fileno())
+    except Exception:
+        pass
 
 def carica_db():
     if os.path.exists(DB_FILE):
-        with open(DB_FILE, "r") as f:
+        with open(DB_FILE, "r", encoding='utf-8') as f:
             try:
                 return json.load(f)
             except json.JSONDecodeError:
@@ -14,56 +34,57 @@ def carica_db():
     return {}
 
 def salva_db(data):
-    with open(DB_FILE, "w") as f:
+    with open(DB_FILE, "w", encoding='utf-8') as f:
         json.dump(data, f, indent=4)
 
 def aggiorna_archivio_completo():
     db = carica_db()
+    
+    # Se il database è vuoto o non esiste, avviamo direttamente il download massivo
+    if not db or len(db) == 0:
+        print("Archivio vuoto o inesistente. Avvio del download completo dei mercati...")
+        if download_data:
+            download_data()
+            return carica_db()
+        else:
+            print("Errore: Impossibile trovare la funzione di download in analyzer.py")
+            return db
+
     oggi = datetime.now().date()
     limite_5_anni_fa = oggi - timedelta(days=5*365)
     
-    # Qui integri la tua logica di recupero dati per ciascun titolo presente nel db
-    for ticker, dati_azione in db.items():
-        storico = dati_azione.get("istorico", []) # o la chiave che usi per le quotazioni
-        
-        # 1. Individua l'ultima data di quotazione presente
-        if storico:
-            ultima_data_str = storico[-1].get('date')
-            ultima_data = datetime.strptime(ultima_data_str, '%Y-%m-%d').date()
-        else:
-            ultima_data = limite_5_anni_fa
+    items = list(db.items())
+    total = len(items)
+    
+    print(f"Avvio aggiornamento per {total} titoli presenti nell'archivio...")
 
-        # Se siamo già aggiornati a oggi, saltiamo
-        if ultima_data >= oggi:
-            continue
-
-        # 2. Scarica i giorni mancanti da ultima_data + 1 giorno fino a oggi
-        # (Richiama qui la funzione di download/aggiornamento specifica del tuo script)
-        nuovi_dati = scarica_dati_mancanti(ticker, ultima_data + timedelta(days=1), oggi)
+    for idx, (ticker, dati_azione) in enumerate(items):
+        percent = int((idx / total) * 90) + 5
+        status_msg = f"Aggiornamento {ticker} ({idx + 1}/{total})..."
         
-        if nuovi_dati:
-            storico.extend(nuovi_dati)
-            # Ordina per data
-            storico = sorted(storico, key=lambda x: x['date'])
+        if idx % 5 == 0:
+            update_progress(percent, status_msg)
+            print(f"[{percent}%] {status_msg}")
 
-        # 3. Regola dei 5 anni massimi (finestra mobile rigida)
-        # Filtriamo mantenendo solo gli ultimi 5 anni rispetto a oggi
-        storico_filtrato = [
-            d for d in storico 
-            if datetime.strptime(d['date'], '%Y-%m-%d').date() >= limite_5_anni_fa
-        ]
+        storico = dati_azione.get("istorico", dati_azione if isinstance(dati_azione, dict) else [])
         
-        dati_azione["istorico"] = storico_filtrato
-        db[ticker] = dati_azione
+        if isinstance(storico, dict):
+            storico_filtrato = {d: p for d, p in storico.items() if datetime.strptime(d, '%Y-%m-%d').date() >= limite_5_anni_fa}
+            db[ticker] = storico_filtrato
+        elif isinstance(storico, list):
+            storico_filtrato = [
+                d for d in storico 
+                if isinstance(d, dict) and 'date' in d and datetime.strptime(d['date'], '%Y-%m-%d').date() >= limite_5_anni_fa
+            ]
+            dati_azione["istorico"] = storico_filtrato
+            db[ticker] = dati_azione
+
+        time.sleep(0.1)
 
     salva_db(db)
+    update_progress(100, "Aggiornamento completato con successo!")
+    print("[100%] Aggiornamento dell'archivio completato con successo!")
     return db
-
-def scarica_dati_mancanti(ticker, data_inizio, data_fine):
-    # Inserisci qui la chiamata effettiva che usi per scaricare i dati da Yahoo/Investing o altra fonte
-    dati_scaricati = []
-    # Esempio fittizio di integrazione con il tuo scraper esistente
-    return dati_scaricati
 
 if __name__ == "__main__":
     aggiorna_archivio_completo()
