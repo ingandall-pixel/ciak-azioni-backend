@@ -33,13 +33,13 @@
 <div class="container">
     <h2>Analisi di Mercato</h2>
     
-    <!-- Pulsanti di azione con la dicitura corretta -->
+    <!-- Pulsanti di azione -->
     <div class="action-buttons">
         <button id="btnAvvia">Avvia Analisi di Mercato</button>
         <button id="btnRestituisci" class="secondary">Restituisci analisi di mercato</button>
     </div>
 
-    <!-- 4 Caselle di Filtro con Titoli -->
+    <!-- Filtri -->
     <div class="filters">
         <div class="filter-group">
             <label for="selectMercato">Mercato</label>
@@ -53,6 +53,7 @@
         <div class="filter-group">
             <label for="selectArco">Arco Temporale</label>
             <select id="selectArco">
+                <option value="1d">1 Giorno</option>
                 <option value="1m">1 Mese</option>
                 <option value="3m">3 Mesi</option>
                 <option value="6m">6 Mesi</option>
@@ -114,7 +115,7 @@
 
 <script>
     window.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('selectArco').selectedIndex = 0;
+        document.getElementById('selectArco').selectedIndex = 0; // Seleziona "1 Giorno" di default
         document.getElementById('inputMediana').value = "0";
         document.getElementById('inputDev').value = "0";
         
