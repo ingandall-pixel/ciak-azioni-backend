@@ -8,7 +8,7 @@
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; color: #333; }
         .container { max-width: 1200px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .filters { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap; align-items: flex-end; }
-        .filter-group { display: flex; flexDirection: column; }
+        .filter-group { display: flex; flex-direction: column; }
         .filter-group label { font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #555; }
         .filter-group select, .filter-group input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
         button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
@@ -30,10 +30,8 @@
 <div class="container">
     <h2>Analisi di Mercato</h2>
     
-    <!-- Pulsante Avvia Analisi -->
     <button id="btnAvvia">Avvia Analisi di Mercato</button>
 
-    <!-- 4 Caselle di Filtro con Titoli -->
     <div class="filters">
         <div class="filter-group">
             <label for="selectMercato">Mercato</label>
@@ -47,7 +45,6 @@
         <div class="filter-group">
             <label for="selectArco">Arco Temporale</label>
             <select id="selectArco">
-                <!-- Il primo elemento in alto è di default -->
                 <option value="1m">1 Mese</option>
                 <option value="3m">3 Mesi</option>
                 <option value="6m">6 Mesi</option>
@@ -67,62 +64,128 @@
         </div>
     </div>
 
-    <!-- Legenda Filtri aggiornata -->
     <div class="legend">
         * Legenda Filtri: Mediana / Media (Min: -100%, Max: +100%). Deviazione Std / Media (Min: 0%, Max: 1000%). I filtri agiscono come limiti inferiori
     </div>
 
-    <!-- Tabelle Risultati -->
     <div id="risultatiContainer">
         <h3>Azioni Italiane</h3>
         <table>
             <thead>
                 <tr>
-                    <th onclick="sortTable(0, 'italia')">Titolo</th>
-                    <th onclick="sortTable(1, 'italia')">Prezzo</th>
+                    <th onclick="ordinaTabella('tabellaItalia', 0, false)">Titolo</th>
+                    <th onclick="ordinaTabella('tabellaItalia', 1, true)">Prezzo</th>
                     <th class="no-sort">Trend</th>
-                    <th onclick="sortTable(3, 'italia')">Var. Periodo</th>
-                    <th onclick="sortTable(4, 'italia')">Var. Giorn.</th>
-                    <th onclick="sortTable(5, 'italia')">Mediana/Media</th>
-                    <th onclick="sortTable(6, 'italia')">Dev.Std/Media</th>
+                    <th onclick="ordinaTabella('tabellaItalia', 3, true)">Var. Periodo</th>
+                    <th onclick="ordinaTabella('tabellaItalia', 4, true)">Var. Giorn.</th>
+                    <th onclick="ordinaTabella('tabellaItalia', 5, true)">Mediana/Media</th>
+                    <th onclick="ordinaTabella('tabellaItalia', 6, true)">Dev.Std/Media</th>
                 </tr>
             </thead>
-            <tbody id="tabellaItalia">
-                <!-- Righe dinamiche -->
-            </tbody>
+            <tbody id="tabellaItalia"></tbody>
         </table>
 
         <h3 style="margin-top: 30px;">Azioni Americane</h3>
         <table>
             <thead>
                 <tr>
-                    <th onclick="sortTable(0, 'usa')">Titolo</th>
-                    <th onclick="sortTable(1, 'usa')">Prezzo</th>
+                    <th onclick="ordinaTabella('tabellaUsa', 0, false)">Titolo</th>
+                    <th onclick="ordinaTabella('tabellaUsa', 1, true)">Prezzo</th>
                     <th class="no-sort">Trend</th>
-                    <th onclick="sortTable(3, 'usa')">Var. Periodo</th>
-                    <th onclick="sortTable(4, 'usa')">Var. Giorn.</th>
-                    <th onclick="sortTable(5, 'usa')">Mediana/Media</th>
-                    <th onclick="sortTable(6, 'usa')">Dev.Std/Media</th>
+                    <th onclick="ordinaTabella('tabellaUsa', 3, true)">Var. Periodo</th>
+                    <th onclick="ordinaTabella('tabellaUsa', 4, true)">Var. Giorn.</th>
+                    <th onclick="ordinaTabella('tabellaUsa', 5, true)">Mediana/Media</th>
+                    <th onclick="ordinaTabella('tabellaUsa', 6, true)">Dev.Std/Media</th>
                 </tr>
             </thead>
-            <tbody id="tabellaUsa">
-                <!-- Righe dinamiche -->
-            </tbody>
+            <tbody id="tabellaUsa"></tbody>
         </table>
     </div>
 </div>
 
 <script>
-    // Imposta valori di default all'apertura della pagina
     window.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('selectArco').selectedIndex = 0; // Primo elemento in alto
-        document.getElementById('inputMediana').value = "0";     // 0% di default
-        document.getElementById('inputDev').value = "0";         // 0% di default
+        document.getElementById('selectArco').selectedIndex = 0;
+        document.getElementById('inputMediana').value = "0";
+        document.getElementById('inputDev').value = "0";
+        
+        document.getElementById('btnAvvia').addEventListener('click', eseguiAnalisi);
     });
 
-    function sortTable(n, mercato) {
-        // Funzione di ordinamento colonne (escluso Trend)
-        console.log("Ordinamento colonna " + n + " per il mercato " + mercato);
+    async function eseguiAnalisi() {
+        const payload = {
+            mercato: document.getElementById('selectMercato').value,
+            arcoTemporale: document.getElementById('selectArco').value,
+            minMediana: document.getElementById('inputMediana').value,
+            minDev: document.getElementById('inputDev').value
+        };
+
+        try {
+            const response = await fetch('/api/analizza', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            popolaTabella('tabellaItalia', data.italia);
+            popolaTabella('tabellaUsa', data.usa);
+        } catch (error) {
+            console.error("Errore durante l'analisi:", error);
+        }
+    }
+
+    function formattaColore(valoreStr) {
+        const val = parseFloat(valoreStr);
+        if (isNaN(val) || val === 0) return 'text-gray';
+        return val > 0 ? 'text-green' : 'text-red';
+    }
+
+    function popolaTabella(idBody, righe) {
+        const tbody = document.getElementById(idBody);
+        tbody.innerHTML = '';
+
+        righe.forEach(item => {
+            const tr = document.createElement('tr');
+            
+            const classeVarPeriodo = formattaColore(item.varPeriodo);
+            const classeVarGiorn = formattaColore(item.varGiornaliera);
+
+            tr.innerHTML = `
+                <td><a href="${item.link}" target="_blank">${item.titolo}</a></td>
+                <td>${item.prezzo}</td>
+                <td>${item.trend}</td>
+                <td class="${classeVarPeriodo}">${item.varPeriodo}%</td>
+                <td class="${classeVarGiorn}">${item.varGiornaliera}%</td>
+                <td>${item.medianaMedia}%</td>
+                <td>${item.devStdMedia}%</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    let direzioniOrdinamento = {};
+    function ordinaTabella(idBody, colIndex, isNumerico) {
+        const tbody = document.getElementById(idBody);
+        const righe = Array.from(tbody.querySelectorAll('tr'));
+        
+        const chiave = `${idBody}-${colIndex}`;
+        let crescente = direzioniOrdinamento[chiave] = !direzioniOrdinamento[chiave];
+
+        righe.sort((a, b) => {
+            let valA = a.children[colIndex].innerText.replace('%', '').trim();
+            let valB = b.children[colIndex].innerText.replace('%', '').trim();
+
+            if (isNumerico) {
+                valA = parseFloat(valA) || 0;
+                valB = parseFloat(valB) || 0;
+                return crescente ? valA - valB : valB - valA;
+            } else {
+                return crescente ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            }
+        });
+
+        tbody.innerHTML = '';
+        righe.forEach(tr => tbody.appendChild(tr));
     }
 </script>
 
