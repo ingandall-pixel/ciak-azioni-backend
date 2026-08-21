@@ -1,0 +1,4 @@
+market_db.json
+temp_db/
+*.log
+progress.json
