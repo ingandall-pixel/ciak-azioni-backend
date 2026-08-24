@@ -9,15 +9,22 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Rotta fondamentale per caricare la pagina HTML principale
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 const DB_FILE = path.join(__dirname, 'market_db.json');
 const PROGRESS_FILE = path.join(__dirname, 'progress.json');
 
-app.get('/api/update', (req, res) => {
+// Rotta chiamata da index.html per avviare l'aggiornamento del database
+app.post('/api/update-market', (req, res) => {
     fs.writeFileSync(PROGRESS_FILE, JSON.stringify({ percent: 0, status: "Avvio in corso..." }));
-    const pythonProcess = spawn('python', ['update_db.py']);
+    const pythonProcess = spawn('python3', ['update_db.py']);
     res.json({ success: true, message: "Aggiornamento avviato con successo." });
 });
 
+// Rotta per monitorare la percentuale di avanzamento
 app.get('/api/progress', (req, res) => {
     if (fs.existsSync(PROGRESS_FILE)) {
         try {
@@ -31,44 +38,34 @@ app.get('/api/progress', (req, res) => {
     }
 });
 
-app.get('/api/analyze', (req, res) => {
+// Rotta chiamata da index.html per ottenere i risultati filtrati (con gestione errori e stderr migliorata)
+app.get('/api/get-results', (req, res) => {
     const { market = 'IT', tf = '1m', mm = '0', sr = '0' } = req.query;
-    const pythonProcess = spawn('python', ['analyzer.py', market, tf, mm, sr]);
+    const pythonProcess = spawn('python3', ['analyzer.py', market, tf, mm, sr]);
     let dataString = '';
+    let errorString = '';
 
     pythonProcess.stdout.on('data', (data) => {
         dataString += data.toString();
     });
 
+    pythonProcess.stderr.on('data', (data) => {
+        errorString += data.toString();
+    });
+
     pythonProcess.on('close', (code) => {
+        if (errorString) {
+            console.error("Errore Python stderr:", errorString);
+        }
         try {
-            const results = JSON.parse(dataString);
+            const cleanData = dataString.trim();
+            const results = JSON.parse(cleanData);
             res.json(results);
         } catch (e) {
+            console.error("Errore di Parsing JSON:", e, "Dati ricevuti:", dataString);
             res.json([]);
         }
     });
-});
-
-app.get('/api/stats', (req, res) => {
-    if (!fs.existsSync(DB_FILE)) {
-        return res.json({ it_count: 0, us_count: 0 });
-    }
-    try {
-        const db = JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-        let it_count = 0;
-        let us_count = 0;
-        for (const [ticker, history] of Object.entries(db)) {
-            if (ticker.endsWith('.MI') || ticker.endsWith('.AS')) {
-                it_count++;
-            } else {
-                us_count++;
-            }
-        }
-        res.json({ it_count, us_count });
-    } catch (e) {
-        res.json({ it_count: 0, us_count: 0 });
-    }
 });
 
 app.listen(PORT, () => {

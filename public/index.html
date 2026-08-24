@@ -3,208 +3,449 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CIAK!-AZIONI</title>
+    <title>CIAK! - AZIONI</title>
     <style>
         body {
-            background-color: #121418;
-            color: #e1e1e6;
             font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
             margin: 0;
             padding: 20px;
-        }
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #2a2e39;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
+            color: #333;
         }
         h1 {
-            margin: 0;
-            font-size: 28px;
-            letter-spacing: 1px;
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
         }
-        .sub-header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-        /* Icona mano rossa con dito medio alzato */
-        .middle-finger-icon {
-            width: 32px;
-            height: 32px;
-            fill: #ff3333;
-        }
-        .controls-panel {
-            background-color: #1a1d24;
+        .controls-container {
+            background: #fff;
             padding: 20px;
             border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             display: flex;
-            gap: 20px;
-            align-items: center;
             flex-wrap: wrap;
-            margin-bottom: 30px;
-            border: 1px solid #2a2e39;
+            gap: 15px;
+            align-items: flex-end;
+            justify-content: center;
+            margin-bottom: 25px;
         }
         .control-group {
             display: flex;
             flex-direction: column;
-            gap: 8px;
         }
-        label {
-            font-size: 14px;
-            color: #8b949e;
-        }
-        select, input {
-            background-color: #121418;
-            border: 1px solid #30363d;
-            color: #c9d1d9;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        button {
-            background-color: #21262d;
-            color: #c9d1d9;
-            border: 1px solid #30363d;
-            padding: 10px 16px;
-            border-radius: 4px;
-            cursor: pointer;
+        .control-group label {
+            font-size: 12px;
             font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        .control-group select {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 140px;
+            height: 37px;
+        }
+        
+        /* Contenitore personalizzato per input numerico con frecce */
+        .number-spinner {
+            display: flex;
+            align-items: center;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            overflow: hidden;
+            background: #fff;
+            width: 140px;
+            height: 37px;
+        }
+        .number-spinner input {
+            width: 80px;
+            border: none;
+            text-align: center;
+            font-size: 14px;
+            outline: none;
+            padding: 8px 0;
+            -moz-appearance: textfield;
+        }
+        .number-spinner input::-webkit-outer-spin-button,
+        .number-spinner input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .spinner-btns {
+            display: flex;
+            flex-direction: column;
+            width: 30px;
+            border-left: 1px solid #ccc;
+            height: 100%;
+        }
+        .spinner-btn {
+            background: #f8f9fa;
+            border: none;
+            font-size: 9px;
+            cursor: pointer;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
             transition: background 0.2s;
         }
-        button:hover {
-            background-color: #30363d;
+        .spinner-btn:hover {
+            background: #e2e6ea;
         }
-        .btn-primary {
-            background-color: #238636;
-            color: #ffffff;
-            border-color: #2ea043;
+        .spinner-btn:active {
+            background: #dae0e5;
         }
-        .btn-primary:hover {
-            background-color: #2ea043;
+        .spinner-btn:first-child {
+            border-bottom: 1px solid #ccc;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #fff;
+            font-size: 14px;
+            height: 37px;
+        }
+        .btn-update { background-color: #0056b3; }
+        .btn-update:hover { background-color: #004085; }
+        .btn-results { background-color: #004085; }
+        .btn-results:hover { background-color: #002752; }
+
+        /* Progress Bar Overlay */
+        #progress-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+        .progress-box {
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            width: 400px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .progress-bar-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            height: 20px;
+            margin: 15px 0;
+        }
+        .progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            background-color: #0056b3;
+            transition: width 0.3s ease;
+        }
+
+        /* Modal Risultati */
+        #results-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            width: 450px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        /* Tabella */
+        .table-container {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow-x: auto;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            background-color: #1a1d24;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid #2a2e39;
+            text-align: left;
         }
         th, td {
             padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #2a2e39;
+            border-bottom: 1px solid #ddd;
             font-size: 14px;
         }
         th {
-            background-color: #161b22;
-            color: #8b949e;
-            cursor: pointer;
+            background-color: #f8f9fa;
+            color: #333;
+            font-weight: bold;
         }
-        tr:hover {
-            background-color: #21262d;
+        /* Righe alternate */
+        tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        /* Stile link ticker */
+        .ticker-link {
+            color: #0056b3;
+            text-decoration: underline;
+            font-weight: bold;
+        }
+        .ticker-link:hover {
+            color: #002752;
         }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>CIAK!-AZIONI</h1>
-        <!-- Rimosso l'account/omino in alto a destra -->
-    </header>
+    <h1>CIAK! - AZIONI 🖕</h1>
 
-    <div class="sub-header">
-        <!-- Mano rossa con dito medio alzato rivolto verso chi guarda -->
-        <svg class="middle-finger-icon" viewBox="0 0 24 24">
-            <path d="M10 3c-1.1 0-2 .9-2 2v6H7c-1.1 0-2 .9-2 2v2c0 3.3 2.7 6 6 6h2c4.4 0 8-3.6 8-8v-3c0-1.1-.9-2-2-2h-1V5c0-1.1-.9-2-2-2h-3zm0 2h3v8h1v2c0 2.2-1.8 4-4 4h-2c-2.2 0-4-1.8-4-4v-2h1V5h3v6h2V5zm5 0h2v6h-2V5z"/>
-        </svg>
-    </div>
-
-    <!-- Pannello dei controlli con i pulsanti per l'analisi e l'aggiornamento -->
-    <div class="controls-panel">
+    <div class="controls-container">
         <div class="control-group">
-            <label for="timeframeSelect">TIME FRAME</label>
-            <select id="timeframeSelect">
-                <option value="3m">3 Mesi</option>
-                <option value="6m">6 Mesi</option>
-                <option value="1y">1 Anno</option>
+            <label>Mercato</label>
+            <select id="market-select">
+                <option value="ALL">Tutti i mercati</option>
+                <option value="IT">Mercato ITA</option>
+                <option value="US">Mercato USA</option>
             </select>
         </div>
         <div class="control-group">
-            <label for="medianInput">Median (%)</label>
-            <input type="text" id="medianInput" placeholder="Inserisci valore">
+            <label>Arco temporale</label>
+            <select id="tf-select">
+                <option value="1d">1 giorno</option>
+                <option value="1w">1 settimana</option>
+                <option value="1m">1 mese</option>
+                <option value="3m" selected>3 mesi</option>
+                <option value="6m">6 mesi</option>
+                <option value="1y">1 anno</option>
+                <option value="5y">5 anni</option>
+                <option value="max">Max</option>
+            </select>
         </div>
+        
+        <!-- Campo % Mediana su Media con pulsanti freccia -->
         <div class="control-group">
-            <label for="stdInput">Dev. Std. (%)</label>
-            <input type="text" id="stdInput" placeholder="Inserisci valore">
+            <label>% Mediana su Media</label>
+            <div class="number-spinner">
+                <input type="text" id="mm-input" value="0">
+                <div class="spinner-btns">
+                    <button class="spinner-btn" onclick="modificaValore('mm-input', 1)">▲</button>
+                    <button class="spinner-btn" onclick="modificaValore('mm-input', -1)">▼</button>
+                </div>
+            </div>
         </div>
-        
-        <!-- Pulsante per Avviare l'analisi di mercato (Aggiorna Mercato) -->
-        <button class="btn-primary" onclick="avviaAnalisiMercato()">AGGIORNA MERCATO</button>
-        
-        <!-- Pulsante per Restituire/Visualizzare i risultati dell'analisi -->
-        <button onclick="restituisciRisultati()">RESTITUISCI RISULTATI</button>
+
+        <!-- Campo % Dvz.Std. su Media con pulsanti freccia -->
+        <div class="control-group">
+            <label>% Dvz.Std. su Media</label>
+            <div class="number-spinner">
+                <input type="text" id="sr-input" value="0">
+                <div class="spinner-btns">
+                    <button class="spinner-btn" onclick="modificaValore('sr-input', 1)">▲</button>
+                    <button class="spinner-btn" onclick="modificaValore('sr-input', -1)">▼</button>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-update" onclick="avviaAggiornamento()">AGGIORNA MERCATO</button>
+        <button class="btn btn-results" onclick="caricaRisultati()">RESTITUISCI RISULTATI</button>
     </div>
 
-    <h2>RISULTATI DELL'ANALISI</h2>
-    <table id="resultsTable">
-        <thead>
-            <tr>
-                <th onclick="sortTable(0)">Ticker</th>
-                <th onclick="sortTable(1)">Descrizione</th>
-                <th onclick="sortTable(2)">Mediana(%)</th>
-                <th onclick="sortTable(3)">Dev.Std(%)</th>
-                <th onclick="sortTable(4)">Ult.Prezzo</th>
-                <th onclick="sortTable(5)">Variaz.%</th>
-                <th>Trend</th>
-            </tr>
-        </thead>
-        <tbody id="tableBody">
-            <!-- I dati verranno popolati dinamicamente tramite JavaScript -->
-        </tbody>
-    </table>
+    <div style="font-weight: bold; margin-bottom: 10px; color: #2c3e50;">RISULTATI DELL'ANALISI</div>
+    
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Titolo ↕</th>
+                    <th>Prezzo ↕</th>
+                    <th>% Incr. giornaliero ↕</th>
+                    <th>% Incr. nel periodo sel. ↕</th>
+                    <th>% Mediana su Media ↕</th>
+                    <th>% Dvz.Std. su Media ↕</th>
+                </tr>
+            </thead>
+            <tbody id="results-tbody">
+                <tr><td colspan="6" style="text-align: center; color: #777;">Nessun dato caricato. Clicca su "Restituisci Risultati".</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Progress Overlay -->
+    <div id="progress-overlay">
+        <div class="progress-box">
+            <h3 id="progress-title">Elaborazione in corso...</h3>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progress-fill"></div>
+            </div>
+            <p id="progress-status" style="font-size: 13px; color: #666;">Attendere prego...</p>
+        </div>
+    </div>
+
+    <!-- Modal Risultati -->
+    <div id="results-modal">
+        <div class="modal-content">
+            <h3 style="color: #0056b3;">Risultati Filtrati</h3>
+            <p>Azioni che hanno superato i filtri:</p>
+            <p style="margin: 5px 0;"><strong>Mercato ITA:</strong> <span id="modal-it-count">0</span></p>
+            <p style="margin: 5px 0;"><strong>Mercato USA:</strong> <span id="modal-us-count">0</span></p>
+            <p style="margin-top: 15px; font-style: italic;" id="modal-total-text">Totale: 0 azioni</p>
+            <button class="btn btn-results" style="margin-top: 15px;" onclick="chiudiModal()">CHIUDI</button>
+        </div>
+    </div>
 
     <script>
-        async function avviaAnalisiMercato() {
-            try {
-                const response = await fetch('/api/update-market', { method: 'POST' });
-                const data = await response.json();
-                alert("Aggiornamento mercato avviato con successo!");
-            } catch (error) {
-                console.error("Errore durante l'aggiornamento:", error);
+        function gestisciTastiInput(e) {
+            if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) {
+                e.preventDefault();
+                return;
+            }
+            if (!/[0-9]/.test(e.key) && !['Backspace', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                e.preventDefault();
             }
         }
 
-        async function restituisciRisultati() {
+        const mmInput = document.getElementById('mm-input');
+        const srInput = document.getElementById('sr-input');
+
+        mmInput.addEventListener('keydown', gestisciTastiInput);
+        srInput.addEventListener('keydown', gestisciTastiInput);
+
+        function modificaValore(id, delta) {
+            const input = document.getElementById(id);
+            let val = parseInt(input.value) || 0;
+            val += delta;
+            if (val < 0) val = 0;
+            input.value = val;
+        }
+
+        function mostraProgresso(titolo) {
+            document.getElementById('progress-title').innerText = titolo;
+            document.getElementById('progress-overlay').style.display = 'flex';
+        }
+
+        function nascondiProgresso() {
+            document.getElementById('progress-overlay').style.display = 'none';
+        }
+
+        function aggiornaBarra(percent, status) {
+            document.getElementById('progress-fill').style.width = percent + '%';
+            document.getElementById('progress-status').innerText = status;
+        }
+
+        // Funzione ausiliaria per determinare il colore in base al valore numerico
+        function getColorStyle(val) {
+            if (val > 0) return 'color: green;';
+            if (val < 0) return 'color: red;';
+            return 'color: gray;'; // Se è 0 o 0.00
+        }
+
+        async function avviaAggiornamento() {
             try {
-                const response = await fetch('/api/get-results');
+                const res = await fetch('/api/update-market', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    mostraProgresso("Aggiornamento Mercato Globale");
+                    const interval = setInterval(async () => {
+                        const pRes = await fetch('/api/progress');
+                        const pData = await pRes.json();
+                        aggiornaBarra(pData.percent, pData.status);
+                        if (pData.percent >= 100) {
+                            clearInterval(interval);
+                            setTimeout(() => { nascondiProgresso(); alert("Aggiornamento completato con successo!"); }, 500);
+                        }
+                    }, 1000);
+                }
+            } catch (err) {
+                alert("Errore di connessione al server.");
+                nascondiProgresso();
+            }
+        }
+
+        async function caricaRisultati() {
+            const market = document.getElementById('market-select').value;
+            const tf = document.getElementById('tf-select').value;
+            const mm = parseInt(document.getElementById('mm-input').value) || 0;
+            const sr = parseInt(document.getElementById('sr-input').value) || 0;
+
+            mostraProgresso("Analisi dei dati in corso...");
+            aggiornaBarra(30, "Elaborazione filtri sui ticker...");
+
+            try {
+                const response = await fetch(`/api/get-results?market=${market}&tf=${tf}&mm=${mm}&sr=${sr}`);
+                aggiornaBarra(90, "Generazione tabella...");
                 const results = await response.json();
-                const tbody = document.getElementById('tableBody');
-                tbody.innerHTML = '';
-                
-                results.forEach(item => {
-                    const row = `<tr>
-                        <td>${item.ticker}</td>
-                        <td>${item.description}</td>
-                        <td>${item.median}</td>
-                        <td>${item.std}</td>
-                        <td>${item.price}</td>
-                        <td style="color: ${item.change >= 0 ? '#3fb950' : '#f85149'}">${item.change}%</td>
-                        <td>[Grafico]</td>
-                    </tr>`;
-                    tbody.innerHTML += row;
-                });
-            } catch (error) {
-                console.error("Errore nel recupero dei risultati:", error);
+
+                aggiornaBarra(100, "Completato!");
+                setTimeout(() => {
+                    nascondiProgresso();
+                    popolaTabella(results);
+                }, 400);
+
+            } catch (e) {
+                nascondiProgresso();
+                alert("Errore durante il recupero dei risultati.");
             }
         }
 
-        function sortTable(columnIndex) {
-            // Logica di ordinamento tabella
+        function popolaTabella(results) {
+            const tbody = document.getElementById('results-tbody');
+            tbody.innerHTML = '';
+
+            let countIt = 0;
+            let countUs = 0;
+
+            if (!results || results.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #777;">Nessuna azione trovata con i filtri selezionati.</td></tr>';
+            } else {
+                results.forEach(item => {
+                    if (item.ticker.endsWith('.MI') || item.ticker.endsWith('.AS')) {
+                        countIt++;
+                    } else {
+                        countUs++;
+                    }
+
+                    const cleanTicker = item.ticker.split('.')[0];
+                    const investingUrl = `https://www.investing.com/search/?q=${encodeURIComponent(cleanTicker)}`;
+
+                    // Determina il colore per le due colonne percentuali
+                    const styleDaily = getColorStyle(item.var_daily);
+                    const stylePeriod = getColorStyle(item.var_period);
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><a href="${investingUrl}" target="_blank" class="ticker-link">${item.ticker}</a></td>
+                        <td>${item.price} €</td>
+                        <td style="${styleDaily}">${item.var_daily}%</td>
+                        <td style="${stylePeriod}">${item.var_period}%</td>
+                        <td>${item.med_mean_ratio}%</td>
+                        <td>${item.std_mean_ratio}%</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            document.getElementById('modal-it-count').innerText = countIt;
+            document.getElementById('modal-us-count').innerText = countUs;
+            document.getElementById('modal-total-text').innerText = `Totale: ${results.length} azioni`;
+            document.getElementById('results-modal').style.display = 'flex';
+        }
+
+        function chiudiModal() {
+            document.getElementById('results-modal').style.display = 'none';
         }
     </script>
 </body>
