@@ -97,16 +97,27 @@ def aggiorna_archivio_completo():
         file_ticker = os.path.join(TEMP_DIR, f"{ticker}.json")
         dati_azione = {"istorico": {}, "years": 0.0}
         
-        # Se il file esiste già (es. script riavviato), caricalo per non ripartire da zero
+        # Se il file esiste già e contiene dati recenti, saltalo istantaneamente per velocità
         if os.path.exists(file_ticker):
             try:
                 with open(file_ticker, 'r', encoding='utf-8') as tf:
                     dati_azione = json.load(tf)
+                
+                storico_esistente = dati_azione.get("istorico", {})
+                if storico_esistente:
+                    date_presenti = [datetime.strptime(str(d).split('T')[0], '%Y-%m-%d').date() for d in storico_esistente.keys()]
+                    if date_presenti and max(date_presenti) >= (oggi - timedelta(days=1)):
+                        anni = dati_azione.get("years", 0.0)
+                        if ticker.endswith('.MI'):
+                            it_count += 1; it_years += anni
+                        else:
+                            us_count += 1; us_years += anni
+                        continue
             except Exception:
                 pass
-
+        
         storico_esistente = dati_azione.get("istorico", {})
-        date_presenti = [datetime.strptime(str(d).split('T')[0], '%Y-%m-%d').date() for d in storico_esistente.keys()]
+        date_presenti = [datetime.strptime(str(d).split('T')[0], '%Y-%m-%d').date() for d in storico_esistente.keys()] if storico_esistente else []
         
         nuovi_dati = {}
         if date_presenti:
@@ -135,7 +146,6 @@ def aggiorna_archivio_completo():
 
         anni = round(max(0.1, (max(date_valide) - min(date_valide)).days / 365.0), 1) if date_valide else 0.0
         
-        # Scrive SOLO questo file sul disco, svuotando la RAM istantaneamente
         with open(file_ticker, 'w', encoding='utf-8') as tf:
             json.dump({"istorico": storico_filtrato, "years": anni}, tf)
             
