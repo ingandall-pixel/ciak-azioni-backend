@@ -39,6 +39,12 @@
             margin-bottom: 5px;
             color: #555;
         }
+        .control-group label span {
+            display: block;
+            font-size: 10px;
+            font-weight: normal;
+            color: #777;
+        }
         .control-group select {
             padding: 8px 12px;
             border: 1px solid #ccc;
@@ -47,7 +53,7 @@
             width: 140px;
             height: 37px;
         }
-        
+
         /* Contenitore personalizzato per input numerico con frecce */
         .number-spinner {
             display: flex;
@@ -235,10 +241,10 @@
                 <option value="max">Max</option>
             </select>
         </div>
-        
+
         <!-- Campo % Mediana su Media con pulsanti freccia -->
         <div class="control-group">
-            <label>% Mediana su Media</label>
+            <label>% Mediana su Media<span>(-100% / +1000%)</span></label>
             <div class="number-spinner">
                 <input type="text" id="mm-input" value="0">
                 <div class="spinner-btns">
@@ -250,7 +256,7 @@
 
         <!-- Campo % Dvz.Std. su Media con pulsanti freccia -->
         <div class="control-group">
-            <label>% Dvz.Std. su Media</label>
+            <label>% Dvz.Std. su Media<span>(0% / +1000%)</span></label>
             <div class="number-spinner">
                 <input type="text" id="sr-input" value="0">
                 <div class="spinner-btns">
@@ -265,17 +271,17 @@
     </div>
 
     <div style="font-weight: bold; margin-bottom: 10px; color: #2c3e50;">RISULTATI DELL'ANALISI</div>
-    
+
     <div class="table-container">
         <table>
             <thead>
                 <tr>
-                    <th>Titolo ↕</th>
-                    <th>Prezzo ↕</th>
-                    <th>% Incr. giornaliero ↕</th>
-                    <th>% Incr. nel periodo sel. ↕</th>
-                    <th>% Mediana su Media ↕</th>
-                    <th>% Dvz.Std. su Media ↕</th>
+                    <th style="cursor: pointer;" onclick="ordinaTabella('ticker')">Titolo ↕</th>
+                    <th style="cursor: pointer;" onclick="ordinaTabella('price')">Prezzo ↕</th>
+                    <th style="cursor: pointer;" onclick="ordinaTabella('var_daily')">% Incr. giornaliero ↕</th>
+                    <th style="cursor: pointer;" onclick="ordinaTabella('var_period')">% Incr. nel periodo sel. ↕</th>
+                    <th style="cursor: pointer;" onclick="ordinaTabella('med_mean_ratio')">% Mediana su Media ↕</th>
+                    <th style="cursor: pointer;" onclick="ordinaTabella('std_mean_ratio')">% Dvz.Std. su Media ↕</th>
                 </tr>
             </thead>
             <tbody id="results-tbody">
@@ -309,11 +315,11 @@
 
     <script>
         function gestisciTastiInput(e) {
-            if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) {
+            if (['.', ',', 'e', 'E', '+'].includes(e.key)) {
                 e.preventDefault();
                 return;
             }
-            if (!/[0-9]/.test(e.key) && !['Backspace', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+            if (!/[0-9]/.test(e.key) && !['Backspace', 'ArrowLeft', 'ArrowRight', 'Tab', '-'].includes(e.key)) {
                 e.preventDefault();
             }
         }
@@ -324,11 +330,29 @@
         mmInput.addEventListener('keydown', gestisciTastiInput);
         srInput.addEventListener('keydown', gestisciTastiInput);
 
+        mmInput.addEventListener('change', () => {
+            let val = parseInt(mmInput.value) || 0;
+            if (val < -100) mmInput.value = -100;
+            if (val > 1000) mmInput.value = 1000;
+        });
+
+        srInput.addEventListener('change', () => {
+            let val = parseInt(srInput.value) || 0;
+            if (val < 0) srInput.value = 0;
+            if (val > 1000) srInput.value = 1000;
+        });
+
         function modificaValore(id, delta) {
             const input = document.getElementById(id);
             let val = parseInt(input.value) || 0;
             val += delta;
-            if (val < 0) val = 0;
+            
+            const minVal = (id === 'mm-input') ? -100 : 0;
+            const maxVal = 1000;
+
+            if (val < minVal) val = minVal;
+            if (val > maxVal) val = maxVal;
+            
             input.value = val;
         }
 
@@ -346,11 +370,10 @@
             document.getElementById('progress-status').innerText = status;
         }
 
-        // Funzione ausiliaria per determinare il colore in base al valore numerico
         function getColorStyle(val) {
             if (val > 0) return 'color: green;';
             if (val < 0) return 'color: red;';
-            return 'color: gray;'; // Se è 0 o 0.00
+            return 'color: gray;';
         }
 
         async function avviaAggiornamento() {
@@ -375,6 +398,9 @@
             }
         }
 
+        let currentResults = [];
+        let sortDirection = {};
+
         async function caricaRisultati() {
             const market = document.getElementById('market-select').value;
             const tf = document.getElementById('tf-select').value;
@@ -387,12 +413,13 @@
             try {
                 const response = await fetch(`/api/get-results?market=${market}&tf=${tf}&mm=${mm}&sr=${sr}`);
                 aggiornaBarra(90, "Generazione tabella...");
-                const results = await response.json();
+                currentResults = await response.json();
 
                 aggiornaBarra(100, "Completato!");
                 setTimeout(() => {
                     nascondiProgresso();
-                    popolaTabella(results);
+                    popolaTabella(currentResults);
+                    mostraModalRisultati(currentResults); // Il modale si apre solo qui
                 }, 400);
 
             } catch (e) {
@@ -405,43 +432,76 @@
             const tbody = document.getElementById('results-tbody');
             tbody.innerHTML = '';
 
+            if (!results || results.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #777;">Nessuna azione trovata con i filtri selezionati.</td></tr>';
+                return;
+            }
+
+            results.forEach(item => {
+                const cleanTicker = item.ticker.split('.')[0];
+                const investingUrl = `https://www.investing.com/search/?q=${encodeURIComponent(cleanTicker)}`;
+
+                const styleDaily = getColorStyle(item.var_daily);
+                const stylePeriod = getColorStyle(item.var_period);
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><a href="${investingUrl}" target="_blank" class="ticker-link">${item.ticker}</a></td>
+                    <td>${item.price} €</td>
+                    <td style="${styleDaily}">${item.var_daily}%</td>
+                    <td style="${stylePeriod}">${item.var_period}%</td>
+                    <td>${item.med_mean_ratio}%</td>
+                    <td>${item.std_mean_ratio}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function mostraModalRisultati(results) {
             let countIt = 0;
             let countUs = 0;
 
-            if (!results || results.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #777;">Nessuna azione trovata con i filtri selezionati.</td></tr>';
-            } else {
-                results.forEach(item => {
-                    if (item.ticker.endsWith('.MI') || item.ticker.endsWith('.AS')) {
-                        countIt++;
-                    } else {
-                        countUs++;
-                    }
-
-                    const cleanTicker = item.ticker.split('.')[0];
-                    const investingUrl = `https://www.investing.com/search/?q=${encodeURIComponent(cleanTicker)}`;
-
-                    // Determina il colore per le due colonne percentuali
-                    const styleDaily = getColorStyle(item.var_daily);
-                    const stylePeriod = getColorStyle(item.var_period);
-
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td><a href="${investingUrl}" target="_blank" class="ticker-link">${item.ticker}</a></td>
-                        <td>${item.price} €</td>
-                        <td style="${styleDaily}">${item.var_daily}%</td>
-                        <td style="${stylePeriod}">${item.var_period}%</td>
-                        <td>${item.med_mean_ratio}%</td>
-                        <td>${item.std_mean_ratio}%</td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            }
+            results.forEach(item => {
+                if (item.ticker.endsWith('.MI') || item.ticker.endsWith('.AS')) {
+                    countIt++;
+                } else {
+                    countUs++;
+                }
+            });
 
             document.getElementById('modal-it-count').innerText = countIt;
             document.getElementById('modal-us-count').innerText = countUs;
             document.getElementById('modal-total-text').innerText = `Totale: ${results.length} azioni`;
             document.getElementById('results-modal').style.display = 'flex';
+        }
+
+        function ordinaTabella(colonna) {
+            if (!currentResults || currentResults.length === 0) return;
+
+            let dir = sortDirection[colonna] === 'asc' ? 'desc' : 'asc';
+            sortDirection[colonna] = dir;
+
+            currentResults.sort((a, b) => {
+                let valA, valB;
+
+                switch(colonna) {
+                    case 'ticker': valA = a.ticker; valB = b.ticker; break;
+                    case 'price': valA = parseFloat(a.price); valB = parseFloat(b.price); break;
+                    case 'var_daily': valA = parseFloat(a.var_daily); valB = parseFloat(b.var_daily); break;
+                    case 'var_period': valA = parseFloat(a.var_period); valB = parseFloat(b.var_period); break;
+                    case 'med_mean_ratio': valA = parseFloat(a.med_mean_ratio); valB = parseFloat(b.med_mean_ratio); break;
+                    case 'std_mean_ratio': valA = parseFloat(a.std_mean_ratio); valB = parseFloat(b.std_mean_ratio); break;
+                    default: return 0;
+                }
+
+                if (typeof valA === 'string') {
+                    return dir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                } else {
+                    return dir === 'asc' ? valA - valB : valB - valA;
+                }
+            });
+
+            popolaTabella(currentResults); // Aggiorna solo la tabella senza aprire il modale
         }
 
         function chiudiModal() {
