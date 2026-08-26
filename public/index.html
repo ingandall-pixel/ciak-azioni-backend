@@ -248,8 +248,8 @@
             <div class="number-spinner">
                 <input type="text" id="mm-input" value="0">
                 <div class="spinner-btns">
-                    <button class="spinner-btn" onclick="modificaValore('mm-input', 1)">▲</button>
-                    <button class="spinner-btn" onclick="modificaValore('mm-input', -1)">▼</button>
+                    <button class="spinner-btn">▲</button>
+                    <button class="spinner-btn">▼</button>
                 </div>
             </div>
         </div>
@@ -260,8 +260,8 @@
             <div class="number-spinner">
                 <input type="text" id="sr-input" value="0">
                 <div class="spinner-btns">
-                    <button class="spinner-btn" onclick="modificaValore('sr-input', 1)">▲</button>
-                    <button class="spinner-btn" onclick="modificaValore('sr-input', -1)">▼</button>
+                    <button class="spinner-btn">▲</button>
+                    <button class="spinner-btn">▼</button>
                 </div>
             </div>
         </div>
@@ -356,6 +356,50 @@
             input.value = val;
         }
 
+        // Logica per incremento continuo tenendo premuto il mouse/touch sulle frecce
+        let timerIncremento = null;
+        let timeoutIniziale = null;
+
+        function avviaIncremento(id, delta) {
+            modificaValore(id, delta);
+            
+            // Ritardo iniziale prima di accelerare la ripetizione continua
+            clearTimeout(timeoutIniziale);
+            if (timerIncremento) clearInterval(timerIncremento);
+
+            timeoutIniziale = setTimeout(() => {
+                timerIncremento = setInterval(() => {
+                    modificaValore(id, delta);
+                }, 100); // Velocità di incremento continuo
+            }, 300); // Attesa iniziale di 300ms prima di partire a ripetere
+        }
+
+        function fermaIncremento() {
+            clearTimeout(timeoutIniziale);
+            if (timerIncremento) {
+                clearInterval(timerIncremento);
+                timerIncremento = null;
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const btns = document.querySelectorAll('.spinner-btn');
+            btns.forEach(btn => {
+                const isSu = btn.innerText.includes('▲');
+                const delta = isSu ? 1 : -1;
+                
+                const spinnerContainer = btn.closest('.number-spinner');
+                const inputId = spinnerContainer.querySelector('input').id;
+
+                btn.addEventListener('mousedown', () => avviaIncremento(inputId, delta));
+                btn.addEventListener('mouseup', fermaIncremento);
+                btn.addEventListener('mouseleave', fermaIncremento);
+                
+                btn.addEventListener('touchstart', (e) => { e.preventDefault(); avviaIncremento(inputId, delta); });
+                btn.addEventListener('touchend', fermaIncremento);
+            });
+        });
+
         function mostraProgresso(titolo) {
             document.getElementById('progress-title').innerText = titolo;
             document.getElementById('progress-overlay').style.display = 'flex';
@@ -419,7 +463,7 @@
                 setTimeout(() => {
                     nascondiProgresso();
                     popolaTabella(currentResults);
-                    mostraModalRisultati(currentResults); // Il modale si apre solo qui
+                    mostraModalRisultati(currentResults);
                 }, 400);
 
             } catch (e) {
@@ -501,7 +545,7 @@
                 }
             });
 
-            popolaTabella(currentResults); // Aggiorna solo la tabella senza aprire il modale
+            popolaTabella(currentResults);
         }
 
         function chiudiModal() {
