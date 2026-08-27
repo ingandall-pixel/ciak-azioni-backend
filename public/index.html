@@ -54,7 +54,6 @@
             height: 37px;
         }
 
-        /* Contenitore personalizzato per input numerico con frecce */
         .number-spinner {
             display: flex;
             align-items: center;
@@ -72,6 +71,7 @@
             font-size: 14px;
             outline: none;
             padding: 8px 0;
+            appearance: textfield; /* Aggiungi questa riga standard */
             -moz-appearance: textfield;
         }
         .number-spinner input::-webkit-outer-spin-button,
@@ -123,7 +123,6 @@
         .btn-results { background-color: #004085; }
         .btn-results:hover { background-color: #002752; }
 
-        /* Progress Bar Overlay */
         #progress-overlay {
             display: none;
             position: fixed;
@@ -156,13 +155,12 @@
             transition: width 0.3s ease;
         }
 
-        /* Modal Risultati */
         #results-modal {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5);
-            z-index: 999;
+            z-index: 1000;
             justify-content: center;
             align-items: center;
         }
@@ -175,7 +173,6 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
         }
 
-        /* Tabella */
         .table-container {
             background: #fff;
             border-radius: 8px;
@@ -197,14 +194,12 @@
             color: #333;
             font-weight: bold;
         }
-        /* Righe alternate */
         tbody tr:nth-child(odd) {
             background-color: #ffffff;
         }
         tbody tr:nth-child(even) {
             background-color: #f2f2f2;
         }
-        /* Stile link ticker */
         .ticker-link {
             color: #0056b3;
             text-decoration: underline;
@@ -242,7 +237,6 @@
             </select>
         </div>
 
-        <!-- Campo % Mediana su Media con pulsanti freccia -->
         <div class="control-group">
             <label>% Mediana su Media<span>(-100% / +1000%)</span></label>
             <div class="number-spinner">
@@ -254,7 +248,6 @@
             </div>
         </div>
 
-        <!-- Campo % Dvz.Std. su Media con pulsanti freccia -->
         <div class="control-group">
             <label>% Dvz.Std. su Media<span>(0% / +1000%)</span></label>
             <div class="number-spinner">
@@ -290,7 +283,6 @@
         </table>
     </div>
 
-    <!-- Progress Overlay -->
     <div id="progress-overlay">
         <div class="progress-box">
             <h3 id="progress-title">Elaborazione in corso...</h3>
@@ -301,7 +293,6 @@
         </div>
     </div>
 
-    <!-- Modal Risultati -->
     <div id="results-modal">
         <div class="modal-content">
             <h3 style="color: #0056b3;">Risultati Filtrati</h3>
@@ -314,64 +305,89 @@
     </div>
 
     <script>
-        function gestisciTastiInput(e) {
-            if (['.', ',', 'e', 'E', '+'].includes(e.key)) {
-                e.preventDefault();
-                return;
-            }
-            if (!/[0-9]/.test(e.key) && !['Backspace', 'ArrowLeft', 'ArrowRight', 'Tab', '-'].includes(e.key)) {
-                e.preventDefault();
-            }
-        }
+        let currentRawResults = []; 
+        let currentResults = [];    
+        let sortDirection = {};
+        let livePriceInterval = null;
 
         const mmInput = document.getElementById('mm-input');
         const srInput = document.getElementById('sr-input');
 
-        mmInput.addEventListener('keydown', gestisciTastiInput);
-        srInput.addEventListener('keydown', gestisciTastiInput);
-
-        mmInput.addEventListener('change', () => {
-            let val = parseInt(mmInput.value) || 0;
-            if (val < -100) mmInput.value = -100;
-            if (val > 1000) mmInput.value = 1000;
+        // Validazione in tempo reale per Mediana (-100 a 1000)
+        mmInput.addEventListener('input', () => {
+            let val = mmInput.value;
+            val = val.replace(/[^0-9-]/g, '');
+            if (val.indexOf('-') > 0) val = val.replace(/-/g, ''); // Meno solo all'inizio
+            
+            if (val !== '' && val !== '-') {
+                let num = parseInt(val, 10);
+                if (num > 1000) val = '1000';
+                if (num < -100) val = '-100';
+            }
+            mmInput.value = val;
         });
 
-        srInput.addEventListener('change', () => {
-            let val = parseInt(srInput.value) || 0;
-            if (val < 0) srInput.value = 0;
-            if (val > 1000) srInput.value = 1000;
+        mmInput.addEventListener('blur', () => {
+            if (mmInput.value === '' || mmInput.value === '-') mmInput.value = '0';
         });
+
+        // Validazione in tempo reale per Deviazione Standard (0 a 1000)
+        srInput.addEventListener('input', () => {
+            let val = srInput.value.replace(/[^0-9]/g, ''); // Blocco totale numeri negativi
+            if (val !== '') {
+                let num = parseInt(val, 10);
+                if (num > 1000) val = '1000';
+                if (num < 0) val = '0';
+            }
+            srInput.value = val;
+        });
+
+        srInput.addEventListener('blur', () => {
+            if (srInput.value === '') srInput.value = '0';
+        });
+
+        document.getElementById('market-select').addEventListener('change', () => applicaFiltroMercato(true));
+
+        function applicaFiltroMercato(showModal = false) {
+            const market = document.getElementById('market-select').value;
+            if (!currentRawResults) currentRawResults = [];
+
+            if (market === 'IT') {
+                currentResults = currentRawResults.filter(item => item.ticker.endsWith('.MI') || item.ticker.endsWith('.AS') || item.market === 'IT');
+            } else if (market === 'US') {
+                currentResults = currentRawResults.filter(item => !item.ticker.endsWith('.MI') && !item.ticker.endsWith('.AS') && item.market !== 'IT');
+            } else {
+                currentResults = [...currentRawResults];
+            }
+
+            popolaTabella(currentResults);
+            
+            if (showModal) {
+                mostraModalRisultati();
+            }
+        }
 
         function modificaValore(id, delta) {
             const input = document.getElementById(id);
             let val = parseInt(input.value) || 0;
             val += delta;
-            
             const minVal = (id === 'mm-input') ? -100 : 0;
             const maxVal = 1000;
-
             if (val < minVal) val = minVal;
             if (val > maxVal) val = maxVal;
-            
             input.value = val;
         }
 
-        // Logica per incremento continuo tenendo premuto il mouse/touch sulle frecce
         let timerIncremento = null;
         let timeoutIniziale = null;
 
         function avviaIncremento(id, delta) {
             modificaValore(id, delta);
-            
-            // Ritardo iniziale prima di accelerare la ripetizione continua
             clearTimeout(timeoutIniziale);
             if (timerIncremento) clearInterval(timerIncremento);
-
             timeoutIniziale = setTimeout(() => {
-                timerIncremento = setInterval(() => {
-                    modificaValore(id, delta);
-                }, 100); // Velocità di incremento continuo
-            }, 300); // Attesa iniziale di 300ms prima di partire a ripetere
+                timerIncremento = setInterval(() => modificaValore(id, delta), 100);
+            }, 300);
         }
 
         function fermaIncremento() {
@@ -387,14 +403,12 @@
             btns.forEach(btn => {
                 const isSu = btn.innerText.includes('▲');
                 const delta = isSu ? 1 : -1;
-                
                 const spinnerContainer = btn.closest('.number-spinner');
                 const inputId = spinnerContainer.querySelector('input').id;
 
                 btn.addEventListener('mousedown', () => avviaIncremento(inputId, delta));
                 btn.addEventListener('mouseup', fermaIncremento);
                 btn.addEventListener('mouseleave', fermaIncremento);
-                
                 btn.addEventListener('touchstart', (e) => { e.preventDefault(); avviaIncremento(inputId, delta); });
                 btn.addEventListener('touchend', fermaIncremento);
             });
@@ -432,7 +446,10 @@
                         aggiornaBarra(pData.percent, pData.status);
                         if (pData.percent >= 100) {
                             clearInterval(interval);
-                            setTimeout(() => { nascondiProgresso(); alert("Aggiornamento completato con successo!"); }, 500);
+                            setTimeout(() => { 
+                                nascondiProgresso(); 
+                                alert("Aggiornamento completato con successo!"); 
+                            }, 500);
                         }
                     }, 1000);
                 }
@@ -441,9 +458,6 @@
                 nascondiProgresso();
             }
         }
-
-        let currentResults = [];
-        let sortDirection = {};
 
         async function caricaRisultati() {
             const market = document.getElementById('market-select').value;
@@ -457,13 +471,17 @@
             try {
                 const response = await fetch(`/api/get-results?market=${market}&tf=${tf}&mm=${mm}&sr=${sr}`);
                 aggiornaBarra(90, "Generazione tabella...");
-                currentResults = await response.json();
+                
+                const rawData = await response.json();
+                currentRawResults = Array.isArray(rawData) ? rawData : [];
+                
+                applicaFiltroMercato(false);
 
                 aggiornaBarra(100, "Completato!");
                 setTimeout(() => {
                     nascondiProgresso();
-                    popolaTabella(currentResults);
-                    mostraModalRisultati(currentResults);
+                    mostraModalRisultati();
+                    avviaPollingLive();
                 }, 400);
 
             } catch (e) {
@@ -484,14 +502,13 @@
             results.forEach(item => {
                 const cleanTicker = item.ticker.split('.')[0];
                 const investingUrl = `https://www.investing.com/search/?q=${encodeURIComponent(cleanTicker)}`;
-
                 const styleDaily = getColorStyle(item.var_daily);
                 const stylePeriod = getColorStyle(item.var_period);
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td><a href="${investingUrl}" target="_blank" class="ticker-link">${item.ticker}</a></td>
-                    <td>${item.price} €</td>
+                    <td data-ticker="${item.ticker}">${item.price} €</td>
                     <td style="${styleDaily}">${item.var_daily}%</td>
                     <td style="${stylePeriod}">${item.var_period}%</td>
                     <td>${item.med_mean_ratio}%</td>
@@ -500,22 +517,83 @@
                 tbody.appendChild(tr);
             });
         }
+       async function aggiornaPrezziLive() {
+    if (!currentResults || currentResults.length === 0) return;
 
-        function mostraModalRisultati(results) {
+    const tickers = currentResults.map(item => item.ticker).join(',');
+    if (!tickers) return;
+
+    try {
+        console.log("Richiesta prezzi live per:", tickers);
+        const response = await fetch(`/api/live-prices?tickers=${encodeURIComponent(tickers)}`);
+        
+        if (!response.ok) {
+            console.error("Errore risposta API live-prices:", response.status);
+            return;
+        }
+
+        const prezziLive = await response.json();
+        console.log("Prezzi ricevuti dal server:", prezziLive);
+
+        document.querySelectorAll('td[data-ticker]').forEach(cell => {
+            const ticker = cell.getAttribute('data-ticker');
+            const cleanTicker = ticker.split('.')[0];
+            
+            // Cerca il valore tra le varie combinazioni possibili nel JSON
+            let rawVal = null;
+            if (prezziLive[ticker] !== undefined) rawVal = prezziLive[ticker];
+            else if (prezziLive[cleanTicker] !== undefined) rawVal = prezziLive[cleanTicker];
+            else if (prezziLive[ticker.toLowerCase()] !== undefined) rawVal = prezziLive[ticker.toLowerCase()];
+            else if (prezziLive[cleanTicker.toLowerCase()] !== undefined) rawVal = prezziLive[cleanTicker.toLowerCase()];
+
+            if (rawVal !== null && rawVal !== undefined) {
+                const numericPrice = (typeof rawVal === 'object' && rawVal.price !== undefined) 
+                                    ? parseFloat(rawVal.price) 
+                                    : parseFloat(rawVal);
+
+                if (!isNaN(numericPrice)) {
+                    const newText = `${numericPrice.toFixed(2)} €`;
+
+                    const targetItem = currentResults.find(i => i.ticker === ticker);
+                    if (targetItem) targetItem.price = numericPrice.toFixed(2);
+
+                    cell.innerText = newText;
+                    
+                    // Fa sempre un breve lampeggio verde per confermare l'avvenuto controllo
+                    cell.style.transition = 'background-color 0.4s';
+                    cell.style.backgroundColor = '#d4edda';
+                    setTimeout(() => { cell.style.backgroundColor = ''; }, 1000);
+                }
+            }
+        });
+    } catch (e) {
+        console.error("Errore durante il polling dei prezzi:", e);
+    }
+}
+
+   function avviaPollingLive() {
+    if (livePriceInterval) clearInterval(livePriceInterval);
+    aggiornaPrezziLive();
+    livePriceInterval = setInterval(aggiornaPrezziLive, 5000);
+}
+
+        function mostraModalRisultati() {
             let countIt = 0;
             let countUs = 0;
 
-            results.forEach(item => {
-                if (item.ticker.endsWith('.MI') || item.ticker.endsWith('.AS')) {
-                    countIt++;
-                } else {
-                    countUs++;
-                }
-            });
+            if (currentRawResults && currentRawResults.length > 0) {
+                currentRawResults.forEach(item => {
+                    if (item.ticker.endsWith('.MI') || item.ticker.endsWith('.AS') || item.market === 'IT') {
+                        countIt++;
+                    } else {
+                        countUs++;
+                    }
+                });
+            }
 
             document.getElementById('modal-it-count').innerText = countIt;
             document.getElementById('modal-us-count').innerText = countUs;
-            document.getElementById('modal-total-text').innerText = `Totale: ${results.length} azioni`;
+            document.getElementById('modal-total-text').innerText = `Totale: ${currentRawResults.length} azioni`;
             document.getElementById('results-modal').style.display = 'flex';
         }
 
@@ -526,16 +604,12 @@
             sortDirection[colonna] = dir;
 
             currentResults.sort((a, b) => {
-                let valA, valB;
+                let valA = a[colonna];
+                let valB = b[colonna];
 
-                switch(colonna) {
-                    case 'ticker': valA = a.ticker; valB = b.ticker; break;
-                    case 'price': valA = parseFloat(a.price); valB = parseFloat(b.price); break;
-                    case 'var_daily': valA = parseFloat(a.var_daily); valB = parseFloat(b.var_daily); break;
-                    case 'var_period': valA = parseFloat(a.var_period); valB = parseFloat(b.var_period); break;
-                    case 'med_mean_ratio': valA = parseFloat(a.med_mean_ratio); valB = parseFloat(b.med_mean_ratio); break;
-                    case 'std_mean_ratio': valA = parseFloat(a.std_mean_ratio); valB = parseFloat(b.std_mean_ratio); break;
-                    default: return 0;
+                if (colonna === 'price' || colonna === 'var_daily' || colonna === 'var_period' || colonna === 'med_mean_ratio' || colonna === 'std_mean_ratio') {
+                    valA = parseFloat(valA);
+                    valB = parseFloat(valB);
                 }
 
                 if (typeof valA === 'string') {
